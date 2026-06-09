@@ -1,0 +1,362 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>WC Survivor — Optimizer v2</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:"Segoe UI",Arial,sans-serif;color:#15241a;
+ background:linear-gradient(165deg,#208a4d,#157a42 55%,#0f5e33);min-height:100vh;padding:14px}
+h1{color:#fff;font-size:21px;margin:0 0 2px;text-shadow:0 1px 2px rgba(0,0,0,.35)}
+.sub{color:#eafff1;font-size:12px;margin:0 0 12px;font-weight:600}
+.panel{background:rgba(255,255,255,.98);border-radius:9px;padding:12px 14px;box-shadow:0 2px 6px rgba(0,0,0,.25);margin-bottom:12px}
+h2{font-size:13px;margin:0 0 9px;color:#0c6e3d;border-bottom:2px solid #1c8a49;padding-bottom:3px;text-transform:uppercase;letter-spacing:.4px}
+label{font-size:12px;font-weight:600;color:#28392c}
+input[type=number],select{font-family:inherit;font-size:13px;padding:5px 8px;border-radius:6px;border:1px solid #bcd;background:#fff}
+input[type=range]{vertical-align:middle}
+button{font-family:inherit;font-size:12px;padding:5px 10px;border-radius:6px;border:1px solid #1c8a49;background:#1c8a49;color:#fff;cursor:pointer;font-weight:700}
+button.reset{background:#f3eaea;border-color:#d9bcbc;color:#a33}
+.row{display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
+.kpis{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px}
+.kpi{background:#eafaf0;border:1px solid #bfe6cd;border-radius:8px;padding:7px 11px;min-width:118px}
+.kpi .v{font-size:18px;font-weight:800;color:#0a5c30}.kpi .l{font-size:10px;color:#3a4a3d;text-transform:uppercase;letter-spacing:.3px}
+.kpi.pos .v{color:#0a7d2f}.kpi.neg .v{color:#b00}
+.verdict{font-size:13px;font-weight:700;margin-top:8px;padding:7px 10px;border-radius:7px}
+.verdict.go{background:#eafaf0;border:1.5px solid #1c8a49;color:#0a5c30}
+.verdict.no{background:#fbeeee;border:1.5px solid #c66;color:#a33}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th,td{border-bottom:1px solid #e3ece3;padding:4px 7px;text-align:right}
+th{color:#0c6e3d;font-size:11px;text-transform:uppercase}th.l,td.l{text-align:left}
+tr.hl td{background:#eafaf0;font-weight:700}
+.lineups{max-height:230px;overflow:auto;font-size:12px}
+.le{display:flex;justify-content:space-between;border-bottom:1px solid #eef;padding:2px 2px}
+.le .t{color:#15241a}.le .s{color:#6a7a6d;font-variant-numeric:tabular-nums}
+.cols{display:flex;gap:12px;flex-wrap:wrap}.cols>div{flex:1;min-width:300px}
+.rec{background:#eafaf0;border:1.5px solid #1c8a49;border-radius:8px;padding:9px 11px;margin-bottom:8px}
+.rec .big{font-size:15px;font-weight:800;color:#0a5c30}.rec .why{font-size:11px;color:#28392c;margin-top:3px}
+.warn{background:#fff4e5;border-left:3px solid #e8870a;padding:5px 8px;border-radius:0 4px 4px 0;font-size:11px;margin-top:6px}
+.warn.bad{background:#fbeeee;border-color:#c33}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:4px 12px;max-height:340px;overflow:auto}
+.grp{grid-column:1/-1;font-weight:800;color:#0c6e3d;font-size:11px;margin-top:4px;border-bottom:1px solid #cfe0d4}
+.team{display:flex;align-items:center;justify-content:space-between;font-size:12px;gap:6px}
+.team .nm{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tg{border:1px solid #ccd;border-radius:5px;padding:0 6px;font-size:11px;font-weight:700;cursor:pointer;background:#fff}
+.tg.u.on{background:#1c8a49;color:#fff;border-color:#1c8a49}.tg.x.on{background:#b00;color:#fff;border-color:#b00}
+tr.pick td{background:#d6f0dd;font-weight:700}tr.reserve td{background:#fff6da;color:#7a5a00}tr.dead td{opacity:.4;text-decoration:line-through}
+.tag{font-size:10px;font-weight:800;border-radius:4px;padding:1px 5px}.tag.p{background:#1c8a49;color:#fff}.tag.r{background:#e8b800;color:#3a2c00}.tag.a{background:#cfe0d4;color:#234}
+.foot{color:#dff3e6;font-size:11px;margin-top:10px;text-shadow:0 1px 1px rgba(0,0,0,.3)}
+.lock{font-size:12px;background:#0c6e3d;color:#fff;border-radius:6px;padding:6px 10px;font-weight:700}
+.cols2{display:flex;gap:12px;flex-wrap:wrap}
+.scard{flex:1;min-width:320px;border:1px solid #d6e6da;border-radius:8px;padding:9px 11px;background:#f7fbf8}
+.scard.proj{background:#fffaf0;border-color:#ecd9b0}
+.stitle{font-size:12px;font-weight:800;color:#0c6e3d;text-transform:uppercase;letter-spacing:.3px;margin-bottom:6px}
+.scard .verdict{font-size:11px;margin-top:6px;padding:6px 8px}
+.scard .kpi{min-width:92px;padding:5px 8px}.scard .kpi .v{font-size:15px}
+.tabbar{display:flex;gap:6px;margin-bottom:10px}
+.tab{background:rgba(255,255,255,.82);color:#0c6e3d;border:1px solid #cfe0d4;font-weight:700;font-size:13px}
+.tab.active{background:#fff;color:#0a5c30;border-bottom:3px solid #1c8a49}
+#probtbl th,#probtbl td{padding:2px 5px;text-align:right;white-space:nowrap}#probtbl th.l,#probtbl td.l{text-align:left}
+#probtbl td.dx{color:#5a4a2a;font-size:11px}
+#probtbl thead th{cursor:pointer;user-select:none}
+#probtbl thead th:hover{background:#0a5c30}
+</style></head><body>
+<h1>⚽ WC Survivor — Optimizer v2</h1>
+<div class="sub">Overlay/EV engine · Round-of-32 entry portfolio · reach-round probabilities. $2M is a <b>guaranteed</b> pool — underfill = overlay = +EV.</div>
+
+<div class="tabbar">
+<button id="tbOpt" class="tab active">Optimizer</button>
+<button id="tbBuild" class="tab">Build</button>
+<button id="tbProb" class="tab">Probabilities</button>
+</div>
+<div id="tabOpt">
+<div class="panel">
+<h2>① Overlay &amp; EV — current vs projected fill</h2>
+<div class="row">
+  <span class="lock">Prize $2,000,000 guaranteed</span>
+  <span class="lock">Entry $100</span>
+  <label>Current entries (live in pool) <input type="number" id="curF" value="5000" style="width:95px"></label>
+  <label>Projected entries at fill <input type="number" id="projF" value="15000" style="width:95px"></label>
+</div>
+<div class="row">
+  <label>Your entries: <b id="yLab">3</b> <input type="range" id="yEnt" min="1" max="150" value="3" style="width:280px"></label>
+  <input type="number" id="yNum" value="3" min="1" max="150" style="width:64px">
+</div>
+<div class="cols2" id="analysis"></div>
+<div style="font-size:11px;color:#3a4a3d;margin-top:8px" id="covline"></div>
+</div>
+
+<div class="panel">
+<h2>② Optimal number of entries</h2>
+<div class="kpis" id="optkpi"></div>
+<div class="verdict" id="optverdict" style="margin-top:8px"></div>
+<div style="font-size:11px;color:#3a4a3d;margin-top:6px" id="optnote"></div>
+</div>
+
+</div><!-- /tabOpt -->
+<div id="tabBuild" style="display:none">
+<div class="panel">
+<h2>Recommended builds — ranked on advance% &amp; advance-then-lose</h2>
+<div class="row">
+  <label>Rank by <select id="rankBy"><option value="score">Overall score</option><option value="adv">Survival (advance%)</option><option value="bal">Balanced</option><option value="burn">Burn quality (&Delta; R32)</option></select></label>
+  <span style="font-size:11px;color:#3a4a3d">Uses entries &amp; field from the Optimizer tab. Title horses (top-6) excluded &mdash; never burn them in the group.</span>
+</div>
+<table id="bestl"><thead><tr><th class="l">Lineup &mdash; 4 teams to advance</th><th>Score</th><th>Survival</th><th>&Delta; R32 (burn)</th><th>Asset cost (deep-run)</th></tr></thead><tbody></tbody></table>
+<div style="font-size:11px;color:#3a4a3d;margin-top:5px"><b>Score</b> = composite build rating = Survival + 0.4&times;Burn &minus; 0.25&times;Asset cost (higher = better all-round build). <b>Survival</b> = combined advance% (all 4 advance). <b>&Delta; R32</b> = avg "advance-then-lose-in-R32" (higher = cleaner burn). <b>Asset cost</b> = avg <b>deep-run index</b> = sum of each team&rsquo;s % chance to reach R16, QF, SF, Final &amp; Win &mdash; the total knockout value you&rsquo;d burn (red &gt;100 = burning deep teams). <br><i>Note:</i> this table ranks <b>individual</b> builds by Score (an explorer). Your <b>recommended portfolio</b> (right) is different &mdash; it&rsquo;s <b>diversified to maximize P(&ge;1 entry reaches the Round of 32)</b>, mixing strong builds with complementary teams so a single group-stage upset doesn&rsquo;t knock out all your entries.</div>
+</div>
+<div class="cols">
+<div class="panel">
+<h2>Recommended portfolio &mdash; <span id="bN">3</span> entries for the Round of 32</h2>
+<div class="lineups" id="bportfolio"></div>
+<div style="font-size:11px;font-weight:700;color:#0c6e3d;margin-top:8px">Team exposure &mdash; times used across your <span id="tcN">3</span> entries</div>
+<div id="teamcount" style="margin-top:3px"></div>
+</div>
+<div class="panel">
+<h2>Round of 32 outlook</h2>
+<div class="kpis" id="bkpi"></div>
+<div style="font-size:11px;color:#3a4a3d;margin-top:8px" id="bnote"></div>
+</div>
+</div>
+</div>
+<div id="tabProb" style="display:none">
+<div class="panel">
+<h2>Per-team probability to reach each round</h2>
+<div style="font-size:11px;color:#3a4a3d;margin-bottom:6px">Cumulative % to reach each round. <span style="color:#9a8a6a">&Delta;</span> columns = % eliminated in that round (reach here &minus; reach next). R16 and deeper rounds outside the top contenders are modeled estimates. <b>Click any column header to sort.</b></div>
+<div style="overflow:auto">
+<table id="probtbl"><thead><tr><th class="l">Team</th><th>Group</th><th>R32</th><th>&Delta;</th><th>R16</th><th>&Delta;</th><th>QF</th><th>&Delta;</th><th>SF</th><th>&Delta;</th><th>Final</th><th>&Delta;</th><th>Win</th></tr></thead><tbody></tbody></table>
+</div>
+</div>
+</div>
+<div class="foot">Model: Opta reach% + calibrated estimates; ratings from R32 win rates. EV is parimutuel overlay (prize &divide; total entries &minus; fee) assuming average skill — your diversified entries run above average, so true EV &ge; shown. Coverage/win% from a 12k-sim portfolio. Survivor variance is brutal: most single entries bust; overlay is harvested over many diversified +EV tickets. Not betting advice.</div>
+
+<script>
+const D={"teams": [{"n": "Spain", "g": "H", "r": [98.5, 74.0, 52.1, 39.0, 25.6, 16.1], "w": 16.1}, {"n": "Brazil", "g": "C", "r": [96.9, 63.7, 38.2, 22.1, 12.3, 6.6], "w": 6.6}, {"n": "Argentina", "g": "J", "r": [96.7, 68.7, 45.2, 30.3, 18.1, 10.4], "w": 10.4}, {"n": "Germany", "g": "E", "r": [96.1, 60.0, 33.8, 20.2, 10.6, 5.1], "w": 5.1}, {"n": "France", "g": "I", "r": [95.3, 69.9, 47.9, 33.4, 21.2, 13.0], "w": 13.0}, {"n": "Portugal", "g": "K", "r": [94.9, 64.5, 40.2, 23.7, 13.0, 7.0], "w": 7.0}, {"n": "England", "g": "L", "r": [90.0, 67.6, 47.7, 30.3, 19.0, 11.2], "w": 11.2}, {"n": "Belgium", "g": "G", "r": [89.6, 53.8, 28.9, 12.8, 5.6, 2.4], "w": 2.4}, {"n": "Morocco", "g": "C", "r": [88.7, 41.1, 19.1, 8.8, 4.1, 1.9], "w": 1.9}, {"n": "Netherlands", "g": "F", "r": [88.2, 53.9, 29.5, 15.2, 7.9, 3.6], "w": 3.6}, {"n": "Mexico", "g": "A", "r": [87.2, 35.7, 14.6, 6.0, 2.4, 1.0], "w": 1.0}, {"n": "Ecuador", "g": "E", "r": [86.9, 38.1, 16.7, 7.3, 3.2, 1.4], "w": 1.4}, {"n": "Switzerland", "g": "B", "r": [85.4, 38.5, 17.4, 7.9, 3.5, 1.6], "w": 1.6}, {"n": "Colombia", "g": "K", "r": [84.9, 40.5, 19.3, 9.2, 4.4, 2.1], "w": 2.1}, {"n": "Uruguay", "g": "H", "r": [84.3, 38.6, 17.7, 8.1, 3.7, 1.7], "w": 1.7}, {"n": "Norway", "g": "I", "r": [82.3, 50.0, 27.2, 14.5, 7.4, 3.5], "w": 3.5}, {"n": "Canada", "g": "B", "r": [79.8, 28.9, 10.5, 3.8, 1.4, 0.5], "w": 0.5}, {"n": "USA", "g": "D", "r": [77.0, 33.5, 14.6, 6.3, 2.8, 1.2], "w": 1.2}, {"n": "Croatia", "g": "L", "r": [76.9, 35.4, 16.3, 7.5, 3.5, 1.6], "w": 1.6}, {"n": "Japan", "g": "F", "r": [76.2, 33.8, 15.0, 6.6, 2.9, 1.3], "w": 1.3}, {"n": "Turkiye", "g": "D", "r": [73.0, 30.9, 13.1, 5.6, 2.4, 1.0], "w": 1.0}, {"n": "South Korea", "g": "A", "r": [70.1, 23.6, 7.9, 2.7, 0.9, 0.3], "w": 0.3}, {"n": "Egypt", "g": "G", "r": [68.2, 24.4, 8.7, 3.1, 1.1, 0.4], "w": 0.4}, {"n": "Austria", "g": "J", "r": [67.4, 25.3, 9.5, 3.6, 1.3, 0.5], "w": 0.5}, {"n": "Scotland", "g": "C", "r": [65.6, 20.6, 6.5, 2.0, 0.6, 0.2], "w": 0.2}, {"n": "Iran", "g": "G", "r": [64.3, 20.3, 6.4, 2.0, 0.6, 0.2], "w": 0.2}, {"n": "Paraguay", "g": "D", "r": [64.3, 22.0, 7.5, 2.6, 0.9, 0.3], "w": 0.3}, {"n": "Czechia", "g": "A", "r": [64.2, 20.2, 6.4, 2.0, 0.6, 0.2], "w": 0.2}, {"n": "Ivory Coast", "g": "E", "r": [64.2, 22.0, 7.5, 2.6, 0.9, 0.3], "w": 0.3}, {"n": "Bosnia", "g": "B", "r": [62.6, 19.8, 6.3, 2.0, 0.6, 0.2], "w": 0.2}, {"n": "Sweden", "g": "F", "r": [62.6, 22.8, 8.3, 3.0, 1.1, 0.4], "w": 0.4}, {"n": "Senegal", "g": "I", "r": [62.0, 27.2, 11.9, 5.2, 2.3, 1.0], "w": 1.0}, {"n": "Australia", "g": "D", "r": [58.8, 20.5, 7.1, 2.5, 0.9, 0.3], "w": 0.3}, {"n": "Algeria", "g": "J", "r": [57.1, 18.4, 5.9, 1.9, 0.6, 0.2], "w": 0.2}, {"n": "Ghana", "g": "L", "r": [49.5, 16.4, 5.5, 1.8, 0.6, 0.2], "w": 0.2}, {"n": "South Africa", "g": "A", "r": [48.9, 14.2, 4.1, 1.2, 0.3, 0.1], "w": 0.1}, {"n": "New Zealand", "g": "G", "r": [47.8, 12.1, 3.1, 0.8, 0.2, 0.1], "w": 0.05}, {"n": "Qatar", "g": "B", "r": [43.5, 11.2, 2.9, 0.7, 0.2, 0.1], "w": 0.05}, {"n": "Tunisia", "g": "F", "r": [43.4, 12.9, 3.8, 1.1, 0.3, 0.1], "w": 0.1}, {"n": "Jordan", "g": "J", "r": [40.9, 12.3, 3.7, 1.1, 0.3, 0.1], "w": 0.1}, {"n": "Panama", "g": "L", "r": [40.0, 10.5, 2.8, 0.7, 0.2, 0.1], "w": 0.05}, {"n": "Saudi Arabia", "g": "H", "r": [39.9, 12.0, 3.6, 1.1, 0.3, 0.1], "w": 0.1}, {"n": "Cape Verde", "g": "H", "r": [32.9, 9.0, 2.5, 0.7, 0.2, 0.1], "w": 0.05}, {"n": "Iraq", "g": "I", "r": [27.1, 7.7, 2.2, 0.6, 0.2, 0.1], "w": 0.05}, {"n": "DR Congo", "g": "K", "r": [22.1, 7.5, 2.6, 0.9, 0.3, 0.1], "w": 0.1}, {"n": "Uzbekistan", "g": "K", "r": [22.1, 7.5, 2.6, 0.9, 0.3, 0.1], "w": 0.1}, {"n": "Curacao", "g": "E", "r": [19.0, 5.8, 1.8, 0.5, 0.2, 0.1], "w": 0.05}, {"n": "Haiti", "g": "C", "r": [15.8, 5.0, 1.6, 0.5, 0.2, 0.1], "w": 0.05}], "port": [["Germany", "Belgium", "Morocco", "Netherlands"], ["Germany", "Mexico", "Ecuador", "Colombia"], ["Switzerland", "Uruguay", "Norway", "Croatia"], ["Belgium", "Canada", "Turkiye", "South Korea"], ["Netherlands", "Mexico", "USA", "Japan"], ["Germany", "Morocco", "Uruguay", "Japan"], ["Germany", "Ecuador", "Switzerland", "Norway"], ["Morocco", "Mexico", "Switzerland", "Colombia"], ["Netherlands", "Ecuador", "Uruguay", "Croatia"], ["Germany", "Netherlands", "Colombia", "Turkiye"], ["Belgium", "Uruguay", "Canada", "USA"], ["Germany", "Belgium", "Mexico", "Norway"], ["Morocco", "Switzerland", "USA", "South Korea"], ["Morocco", "Mexico", "Ecuador", "Turkiye"], ["Germany", "Switzerland", "Croatia", "Japan"], ["Colombia", "Norway", "Japan", "South Korea"], ["Germany", "Mexico", "Switzerland", "Colombia"], ["Netherlands", "Switzerland", "Colombia", "Uruguay"], ["Belgium", "Morocco", "Switzerland", "Norway"], ["Germany", "Belgium", "Morocco", "Mexico"], ["Germany", "Belgium", "Morocco", "Ecuador"], ["Germany", "Belgium", "Netherlands", "Mexico"], ["Germany", "Morocco", "Netherlands", "Mexico"], ["Germany", "Belgium", "Netherlands", "Ecuador"], ["Germany", "Belgium", "Morocco", "Switzerland"], ["Germany", "Morocco", "Netherlands", "Ecuador"], ["Germany", "Belgium", "Morocco", "Colombia"], ["Germany", "Belgium", "Netherlands", "Switzerland"], ["Germany", "Belgium", "Morocco", "Uruguay"], ["Germany", "Belgium", "Mexico", "Ecuador"], ["Germany", "Belgium", "Netherlands", "Colombia"], ["Germany", "Morocco", "Mexico", "Ecuador"], ["Germany", "Morocco", "Netherlands", "Switzerland"], ["Germany", "Belgium", "Netherlands", "Uruguay"], ["Germany", "Belgium", "Mexico", "Switzerland"], ["Germany", "Morocco", "Netherlands", "Colombia"], ["Germany", "Netherlands", "Mexico", "Ecuador"], ["Germany", "Belgium", "Mexico", "Colombia"], ["Germany", "Morocco", "Netherlands", "Uruguay"], ["Germany", "Belgium", "Ecuador", "Switzerland"], ["Germany", "Belgium", "Ecuador", "Colombia"], ["Germany", "Morocco", "Mexico", "Switzerland"], ["Germany", "Morocco", "Mexico", "Colombia"], ["Germany", "Belgium", "Mexico", "Uruguay"], ["Germany", "Morocco", "Ecuador", "Colombia"], ["Germany", "Belgium", "Morocco", "Norway"], ["Germany", "Morocco", "Ecuador", "Switzerland"], ["Germany", "Netherlands", "Mexico", "Switzerland"], ["Germany", "Belgium", "Ecuador", "Uruguay"], ["Germany", "Morocco", "Mexico", "Uruguay"], ["Germany", "Netherlands", "Mexico", "Colombia"], ["Germany", "Morocco", "Ecuador", "Uruguay"], ["Germany", "Belgium", "Switzerland", "Colombia"], ["Germany", "Netherlands", "Ecuador", "Switzerland"], ["Germany", "Belgium", "Netherlands", "Norway"], ["Germany", "Netherlands", "Ecuador", "Colombia"], ["Germany", "Netherlands", "Mexico", "Uruguay"], ["Germany", "Belgium", "Colombia", "Uruguay"], ["Germany", "Belgium", "Switzerland", "Uruguay"], ["Germany", "Netherlands", "Ecuador", "Uruguay"], ["Germany", "Morocco", "Netherlands", "Norway"], ["Germany", "Morocco", "Switzerland", "Colombia"], ["Germany", "Morocco", "Colombia", "Uruguay"], ["Germany", "Mexico", "Ecuador", "Switzerland"], ["Germany", "Belgium", "Ecuador", "Norway"], ["Germany", "Morocco", "Switzerland", "Uruguay"], ["Germany", "Belgium", "Morocco", "Canada"], ["Germany", "Netherlands", "Switzerland", "Colombia"], ["Belgium", "Morocco", "Netherlands", "Mexico"], ["Germany", "Morocco", "Ecuador", "Norway"], ["Germany", "Netherlands", "Colombia", "Uruguay"], ["Germany", "Morocco", "Mexico", "Norway"], ["Germany", "Netherlands", "Switzerland", "Uruguay"], ["Germany", "Mexico", "Ecuador", "Uruguay"], ["Belgium", "Morocco", "Netherlands", "Ecuador"], ["Germany", "Belgium", "Netherlands", "Canada"], ["Germany", "Belgium", "Switzerland", "Norway"], ["Germany", "Netherlands", "Mexico", "Norway"], ["Germany", "Netherlands", "Ecuador", "Norway"], ["Germany", "Mexico", "Colombia", "Uruguay"], ["Germany", "Belgium", "Colombia", "Norway"], ["Germany", "Ecuador", "Switzerland", "Colombia"], ["Germany", "Morocco", "Netherlands", "Canada"], ["Germany", "Belgium", "Uruguay", "Norway"], ["Germany", "Ecuador", "Colombia", "Uruguay"], ["Belgium", "Morocco", "Netherlands", "Switzerland"], ["Germany", "Mexico", "Switzerland", "Uruguay"], ["Germany", "Belgium", "Mexico", "Canada"], ["Belgium", "Morocco", "Mexico", "Ecuador"], ["Germany", "Morocco", "Switzerland", "Norway"], ["Germany", "Morocco", "Colombia", "Norway"], ["Belgium", "Morocco", "Netherlands", "Colombia"], ["Germany", "Ecuador", "Switzerland", "Uruguay"], ["Germany", "Mexico", "Ecuador", "Norway"], ["Germany", "Belgium", "Ecuador", "Canada"], ["Germany", "Morocco", "Uruguay", "Norway"], ["Belgium", "Morocco", "Netherlands", "Uruguay"], ["Germany", "Morocco", "Mexico", "Canada"], ["Belgium", "Netherlands", "Mexico", "Ecuador"], ["Belgium", "Morocco", "Mexico", "Switzerland"], ["Germany", "Belgium", "Morocco", "USA"], ["Germany", "Netherlands", "Switzerland", "Norway"], ["Germany", "Morocco", "Ecuador", "Canada"], ["Morocco", "Netherlands", "Mexico", "Ecuador"], ["Belgium", "Morocco", "Mexico", "Colombia"], ["Germany", "Netherlands", "Colombia", "Norway"], ["Germany", "Switzerland", "Colombia", "Uruguay"], ["Belgium", "Netherlands", "Mexico", "Switzerland"], ["Germany", "Belgium", "Switzerland", "Canada"], ["Germany", "Netherlands", "Uruguay", "Norway"], ["Belgium", "Morocco", "Ecuador", "Switzerland"], ["Germany", "Belgium", "Morocco", "Croatia"], ["Germany", "Netherlands", "Mexico", "Canada"], ["Belgium", "Morocco", "Ecuador", "Colombia"], ["Germany", "Belgium", "Colombia", "Canada"], ["Belgium", "Morocco", "Mexico", "Uruguay"], ["Germany", "Mexico", "Switzerland", "Norway"], ["Germany", "Netherlands", "Ecuador", "Canada"], ["Germany", "Ecuador", "Colombia", "Norway"], ["Germany", "Belgium", "Netherlands", "USA"], ["Belgium", "Netherlands", "Mexico", "Colombia"], ["Morocco", "Netherlands", "Mexico", "Switzerland"], ["Germany", "Morocco", "Switzerland", "Canada"], ["Germany", "Mexico", "Colombia", "Norway"], ["Belgium", "Morocco", "Ecuador", "Uruguay"], ["Germany", "Morocco", "Netherlands", "USA"], ["Belgium", "Netherlands", "Ecuador", "Switzerland"], ["Germany", "Morocco", "Colombia", "Canada"], ["Germany", "Belgium", "Netherlands", "Croatia"], ["Germany", "Belgium", "Uruguay", "Canada"], ["Germany", "Ecuador", "Uruguay", "Norway"], ["Belgium", "Netherlands", "Mexico", "Uruguay"], ["Morocco", "Netherlands", "Mexico", "Colombia"], ["Germany", "Belgium", "Morocco", "Japan"], ["Germany", "Mexico", "Uruguay", "Norway"], ["Belgium", "Netherlands", "Ecuador", "Colombia"], ["Belgium", "Morocco", "Switzerland", "Colombia"], ["Germany", "Morocco", "Netherlands", "Croatia"], ["Germany", "Mexico", "Ecuador", "Canada"], ["Germany", "Belgium", "Mexico", "USA"], ["Morocco", "Netherlands", "Ecuador", "Switzerland"], ["Germany", "Netherlands", "Switzerland", "Canada"], ["Morocco", "Netherlands", "Ecuador", "Colombia"], ["Belgium", "Morocco", "Netherlands", "Norway"], ["Morocco", "Netherlands", "Mexico", "Uruguay"], ["Belgium", "Netherlands", "Ecuador", "Uruguay"], ["Germany", "Belgium", "Netherlands", "Japan"], ["Belgium", "Morocco", "Colombia", "Uruguay"], ["Germany", "Morocco", "Uruguay", "Canada"], ["Belgium", "Morocco", "Switzerland", "Uruguay"]], "solo": [0.68075, 0.62075, 0.45425, 0.36841666666666667, 0.452, 0.5515, 0.5871666666666666, 0.5649166666666666, 0.49466666666666664, 0.524, 0.4686666666666667, 0.6205833333333334, 0.415, 0.48925, 0.4746666666666667, 0.3759166666666667, 0.60975, 0.5444166666666667, 0.5626666666666666, 0.672, 0.66825, 0.66575, 0.66075, 0.66, 0.6590833333333334, 0.6576666666666666, 0.6573333333333333, 0.6530833333333333, 0.6526666666666666, 0.6520833333333333, 0.6491666666666667, 0.6485, 0.6474166666666666, 0.6463333333333333, 0.645, 0.64475, 0.6423333333333333, 0.6420833333333333, 0.6418333333333334, 0.63925, 0.6385, 0.6379166666666667, 0.6375, 0.6374166666666666, 0.6364166666666666, 0.63475, 0.63425, 0.6340833333333333, 0.6335833333333334, 0.6319166666666667, 0.63075, 0.63025, 0.629, 0.6285833333333334, 0.6281666666666667, 0.6278333333333334, 0.6264166666666666, 0.6256666666666667, 0.6255833333333334, 0.6235, 0.6231666666666666, 0.6230833333333333, 0.622, 0.61925, 0.6188333333333333, 0.6183333333333333, 0.61725, 0.6165833333333334, 0.6160833333333333, 0.61525, 0.6151666666666666, 0.6144166666666667, 0.6140833333333333, 0.61375, 0.61175, 0.6105, 0.6095, 0.6089166666666667, 0.6073333333333333, 0.6069166666666667, 0.6066666666666667, 0.6063333333333333, 0.6058333333333333, 0.6051666666666666, 0.6050833333333333, 0.6049166666666667, 0.6041666666666666, 0.6038333333333333, 0.60375, 0.6021666666666666, 0.60175, 0.6009166666666667, 0.6003333333333334, 0.6000833333333333, 0.5999166666666667, 0.5986666666666667, 0.59775, 0.5976666666666667, 0.5975, 0.5970833333333333, 0.597, 0.5969166666666667, 0.5961666666666666, 0.59525, 0.594, 0.59375, 0.5934166666666667, 0.5928333333333333, 0.5924166666666667, 0.5920833333333333, 0.592, 0.5919166666666666, 0.5915, 0.59125, 0.5895, 0.58925, 0.5885, 0.5881666666666666, 0.5881666666666666, 0.5880833333333333, 0.5878333333333333, 0.5873333333333334, 0.5869166666666666, 0.5866666666666667, 0.58625, 0.5858333333333333, 0.5858333333333333, 0.58525, 0.585, 0.58475, 0.5845, 0.5839166666666666, 0.58375, 0.5835833333333333, 0.5834166666666667, 0.5834166666666667, 0.5825833333333333, 0.5818333333333333, 0.5816666666666667, 0.5815833333333333, 0.5815833333333333, 0.58125, 0.58125, 0.5804166666666667, 0.57975, 0.5795, 0.5790833333333333, 0.57875, 0.5786666666666667, 0.5786666666666667], "gcov": [0.68075, 0.866, 0.92775, 0.9518333333333333, 0.968, 0.978, 0.9838333333333333, 0.98825, 0.9915833333333334, 0.9936666666666667, 0.9955, 0.99675, 0.9979166666666667, 0.9985833333333334, 0.9991666666666666, 0.9995833333333334, 0.99975, 0.9999166666666667, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0], "deep": {"1": {"R16": 0.08, "win": 0.0048}, "2": {"R16": 0.1468, "win": 0.012}, "3": {"R16": 0.1828, "win": 0.0152}, "5": {"R16": 0.2348, "win": 0.018}, "8": {"R16": 0.2912, "win": 0.0232}, "12": {"R16": 0.34, "win": 0.024}, "20": {"R16": 0.3532, "win": 0.0352}, "40": {"R16": 0.4132, "win": 0.036}, "75": {"R16": 0.4396, "win": 0.0496}, "150": {"R16": 0.4548, "win": 0.0468}}, "ewin": [0.006, 0.00367, 0.004, 0.004, 0.00567, 0.005, 0.005, 0.00733, 0.00367, 0.005, 0.00533, 0.00433, 0.00767, 0.00767, 0.00333, 0.005, 0.00433, 0.00667, 0.004, 0.00367, 0.00367, 0.005, 0.00533, 0.00433, 0.005, 0.00467, 0.00367, 0.00433, 0.00367, 0.00467, 0.00467, 0.00333, 0.005, 0.00633, 0.005, 0.00533, 0.00633, 0.005, 0.00533, 0.00567, 0.005, 0.004, 0.004, 0.004, 0.00367, 0.004, 0.005, 0.006, 0.00433, 0.004, 0.00667, 0.00433, 0.00567, 0.00567, 0.00467, 0.00567, 0.00633, 0.00567, 0.00467, 0.005, 0.00433, 0.004, 0.00567, 0.00533, 0.00367, 0.00533, 0.00367, 0.00533, 0.004, 0.004, 0.00433, 0.00433, 0.006, 0.00467, 0.00333, 0.00333, 0.00433, 0.006, 0.00533, 0.00567, 0.00367, 0.005, 0.00333, 0.00433, 0.005, 0.00433, 0.005, 0.00467, 0.00633, 0.00467, 0.004, 0.00567, 0.00567, 0.00433, 0.004, 0.004, 0.00433, 0.00367, 0.004, 0.00667, 0.00433, 0.00533, 0.003, 0.00533, 0.008, 0.004, 0.00633, 0.005, 0.00433, 0.005, 0.00633, 0.00333, 0.006, 0.007, 0.005, 0.00633, 0.005, 0.00533, 0.00467, 0.00433, 0.005, 0.00667, 0.00433, 0.00467, 0.007, 0.00567, 0.00433, 0.00333, 0.00367, 0.004, 0.00467, 0.004, 0.00567, 0.004, 0.005, 0.00333, 0.00733, 0.00367, 0.00367, 0.00467, 0.006, 0.00433, 0.00467, 0.00533, 0.00633, 0.00333, 0.00367, 0.00767, 0.004, 0.006], "rt": {"Spain": 1692.0262541465775, "Brazil": 1613.2005394525256, "Argentina": 1655.9194822869326, "Germany": 1588.2576193911943, "France": 1675.8573836502974, "Portugal": 1630.6744524106055, "England": 1691.8794710429893, "Belgium": 1570.759699609006, "Morocco": 1474.4939476622305, "Netherlands": 1578.5178580575873, "Mexico": 1436.344394828401, "Ecuador": 1457.0020614691634, "Switzerland": 1465.7151547173669, "Colombia": 1484.0288212400194, "Uruguay": 1470.668441840762, "Norway": 1575.9069928019665, "Canada": 1401.6720241679157, "USA": 1454.6222200328832, "Croatia": 1472.382066125478, "Japan": 1460.620337473969, "Turkiye": 1446.2705534356664, "South Korea": 1382.183620032061, "Egypt": 1398.3662863338518, "Austria": 1411.5353701360598, "Scotland": 1364.261882637524, "Iran": 1365.6173445708102, "Paraguay": 1386.4329253788655, "Czechia": 1364.7594771841746, "Ivory Coast": 1386.844091944213, "Bosnia": 1366.0885684993436, "Sweden": 1403.2207099707064, "Senegal": 1457.1958640350472, "Australia": 1391.4220348348526, "Algeria": 1370.84274319625, "Ghana": 1378.0063417087915, "South Africa": 1344.7835478368731, "New Zealand": 1312.0468616817027, "Qatar": 1316.0062001356314, "Tunisia": 1350.5159483809853, "Jordan": 1353.415631324142, "Panama": 1320.54691323671, "Saudi Arabia": 1353.4308171096109, "Cape Verde": 1330.337843396475, "Iraq": 1339.4755980969023, "DR Congo": 1384.2833630429052, "Uzbekistan": 1384.2833630429052, "Curacao": 1357.141624942835, "Haiti": 1366.2184995396276}};
+const T=D.teams, PORT=D.port, SOLO=D.solo, GCOV=D.gcov, DEEP=D.deep, EWIN=D.ewin, RT=D.rt;
+const BY={}; T.forEach(t=>BY[t.n]=t);
+const ORDER=["R32","R16","QF","SF","Final"], PICKS={R32:2,R16:2,QF:1,SF:1,Final:1}, KIDX={R32:0,R16:1,QF:2,SF:3,Final:4};
+const LBL={R32:"Round of 32",R16:"Round of 16",QF:"Quarterfinal",SF:"Semifinal",Final:"Final"};
+const KEY="wcopt2";
+let st=JSON.parse(localStorage.getItem(KEY)||'{}');
+st.out=st.out||[]; st.used=st.used||{}; st.round=st.round||"Group"; st.entry=st.entry||0; st.lev=st.lev||0;
+let out=new Set(st.out);
+function usedSet(e){st.used[e]=st.used[e]||[]; return new Set(st.used[e]);}
+function save(){st.out=[...out]; localStorage.setItem(KEY,JSON.stringify(st));}
+function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
+const $=id=>document.getElementById(id);
+const SAMP=Object.keys(DEEP).map(Number).sort((a,b)=>a-b);
+function deepAt(y){y=clamp(y,1,150);let lo=SAMP[0],hi=SAMP[SAMP.length-1];
+  for(let i=0;i<SAMP.length-1;i++){if(y>=SAMP[i]&&y<=SAMP[i+1]){lo=SAMP[i];hi=SAMP[i+1];break;}}
+  const f=hi===lo?0:(y-lo)/(hi-lo);
+  return{R16:DEEP[lo].R16+(DEEP[hi].R16-DEEP[lo].R16)*f,win:DEEP[lo].win+(DEEP[hi].win-DEEP[lo].win)*f};}
+function groupCov(y){return GCOV[clamp(y,1,150)-1];}
+
+const PRIZE=2000000,FEE=100,BREAKEVEN=20000;
+function kpi(l,v,c){return '<div class="kpi '+(c||"")+'"><div class="v">'+v+'</div><div class="l">'+l+'</div></div>';}
+function scen(title,F,Y,cls){
+  const total=F+Y,collected=total*FEE,overlay=Math.max(0,PRIZE-collected);
+  const evE=PRIZE/total-FEE,mult=PRIZE/collected,k=n=>'$'+Math.round(n).toLocaleString(),ev0=evE>=0;
+  const kp=kpi("Total entries",total.toLocaleString())+kpi("Pool pays","$"+mult.toFixed(2)+"/$1")+
+    kpi("Overlay",k(overlay),overlay>0?"pos":"")+kpi("EV / entry",(ev0?"+":"")+k(evE),ev0?"pos":"neg")+
+    kpi("Total EV ("+Y+")",(ev0?"+":"")+k(evE*Y),ev0?"pos":"neg");
+  const vd= total<BREAKEVEN
+    ? '<div class="verdict go">&#9989; OVERLAY &mdash; field pays $'+mult.toFixed(2)+'/$1; +EV until '+BREAKEVEN.toLocaleString()+' total ('+Math.max(0,BREAKEVEN-total).toLocaleString()+' to go).</div>'
+    : '<div class="verdict no">&#9888; No overlay &mdash; '+total.toLocaleString()+' &ge; '+BREAKEVEN.toLocaleString()+' break-even; avg-skill EV negative.</div>';
+  return '<div class="scard '+(cls||"")+'"><div class="stitle">'+title+'</div><div class="kpis">'+kp+'</div>'+vd+'</div>';
+}
+function ev(){
+  const Y=+$("yNum").value,cur=+$("curF").value,proj=+$("projF").value,d=deepAt(Y),g=groupCov(Y)*100;
+  $("analysis").innerHTML=scen("Current (live)",cur,Y,"")+scen("Projected at fill",proj,Y,"proj");
+  $("covline").innerHTML="Your <b>"+Y+"</b> entries: P(&ge;1 gets all 4 picks into the <b>Round of 32</b>) <b>"+(groupCov(Y)*100).toFixed(1)+"%</b>.";
+  renderBuilder();renderOptimal();
+}
+function renderOptimal(){
+  const Y=+$("yNum").value;
+  const maxg=GCOV[GCOV.length-1]; let sat=GCOV.findIndex(v=>v>=0.99); sat=sat<0?GCOV.length:sat+1;
+  $("optkpi").innerHTML=kpi("Recommended",sat+" entries")+kpi("P(&ge;1 reaches R32) @"+Y,(groupCov(Y)*100).toFixed(1)+"%")+kpi("Max coverage",(maxg*100).toFixed(1)+"%");
+  $("optverdict").innerHTML='<div class="verdict go">Run <b>~'+sat+' entries</b> &mdash; group-stage coverage saturates there (~99% chance at least one of your entries gets all 4 picks into the Round of 32). More entries barely raise it.</div>';
+  $("optnote").innerHTML="Focused on the Round of 32 &mdash; the chance &ge;1 of your entries survives the group stage. (The overlay panel above covers the EV side of how many to enter.)";
+}
+function knockoutPlan(gp){
+  let pool=T.map(t=>t.n).filter(n=>gp.indexOf(n)<0).sort((a,b)=>RT[b]-RT[a]);
+  const plan=[];
+  ORDER.forEach((rnd,j)=>{const after=ORDER.slice(j+1).reduce((s,x)=>s+PICKS[x],0);
+    const reserve=new Set(pool.slice(0,after)); let el=pool.filter(n=>!reserve.has(n)); if(el.length<PICKS[rnd])el=pool.slice();
+    el.sort((a,b)=>winThis(b,rnd)-winThis(a,rnd)); const ch=el.slice(0,PICKS[rnd]);
+    plan.push([rnd,ch]); pool=pool.filter(n=>ch.indexOf(n)<0);});
+  return plan;
+}
+function buildPool(){
+  const horses=new Set([...T].sort((a,b)=>b.w-a.w).slice(0,6).map(t=>t.n));
+  return T.filter(t=>!horses.has(t.n)&&t.r[0]>=70).map(t=>t.n);
+}
+function bestLineups(mode){
+  const p=buildPool(),out=[];
+  for(let i=0;i<p.length;i++)for(let j=i+1;j<p.length;j++)for(let k=j+1;k<p.length;k++)for(let l=k+1;l<p.length;l++){
+    const ts=[p[i],p[j],p[k],p[l]];
+    const adv=ts.reduce((q,n)=>q*BY[n].r[0]/100,1)*100;
+    const dr=ts.reduce((s,n)=>s+(BY[n].r[0]-BY[n].r[1]),0)/4;
+    const cost=ts.reduce((s,n)=>s+BY[n].r[1]+BY[n].r[2]+BY[n].r[3]+BY[n].r[4]+BY[n].r[5],0)/4; // deep-run index: sum reach% R16..Win
+    const score=adv+0.4*dr-0.25*cost;
+    out.push({ts,adv,dr,cost,score});
+  }
+  const sc=mode==='burn'?(c=>c.dr):mode==='bal'?(c=>c.adv*0.7+c.dr):mode==='adv'?(c=>c.adv):(c=>c.score);
+  out.sort((a,b)=>sc(b)-sc(a));
+  return out.slice(0,12);
+}
+function renderBuilder(){
+  const best=bestLineups($("rankBy").value);let h="";
+  best.forEach((c,i)=>{const hi=c.cost>100?' style="color:#b00;font-weight:700"':'';const row=i===0?' style="background:#d6f0dd"':'';
+    h+='<tr'+row+'><td class="l">'+c.ts.join(" · ")+'</td><td><b style="color:#0a5c30">'+c.score.toFixed(0)+'</b></td><td>'+c.adv.toFixed(1)+'%</td><td>'+c.dr.toFixed(1)+'%</td><td'+hi+'>'+c.cost.toFixed(0)+'</td></tr>';});
+  $("bestl").querySelector("tbody").innerHTML=h;
+  const Y=+$("yNum").value;$("bN").textContent=Y;let pf="";
+  for(let i=0;i<Math.min(Y,PORT.length);i++)pf+='<div class="le"><span class="t"><b>E'+(i+1)+'</b> '+PORT[i].join(" · ")+'</span><span class="s">advance '+(SOLO[i]*100).toFixed(0)+'%</span></div>';
+  $("bportfolio").innerHTML=pf;
+  const nE=Math.min(Y,PORT.length),cnt={};
+  for(let i=0;i<nE;i++)PORT[i].forEach(n=>cnt[n]=(cnt[n]||0)+1);
+  $("tcN").textContent=nE;
+  let ch="";Object.entries(cnt).sort((a,b)=>b[1]-a[1]).forEach(e=>{const pct=Math.round(e[1]/nE*100);
+    const bg=pct>=60?'#1c8a49':pct>=30?'#bfe6cd':'#eef5ef',col=pct>=60?'#fff':'#15241a';
+    ch+='<span style="display:inline-block;margin:2px 4px 2px 0;padding:1px 7px;border-radius:4px;background:'+bg+';color:'+col+';border:1px solid #bfe6cd;font-size:11px"><b>'+e[0]+'</b> &times;'+e[1]+'</span>';});
+  $("teamcount").innerHTML=ch||'<span style="font-size:11px;color:#888">&mdash;</span>';
+  const g=groupCov(Y)*100;
+  $("bkpi").innerHTML=kpi("P(&ge;1 reaches R32)",g.toFixed(1)+"%");
+  $("bnote").innerHTML="<b>P(&ge;1 reaches R32)</b> = chance at least one of your "+Y+" entries gets all 4 group picks into the Round of 32. Each entry above shows its own advance% (all 4 advancing). The set is diversified so a single group upset doesn&rsquo;t sink every entry.";
+}
+function curve(cur,proj){
+  const ks=[1,2,3,5,8,12,20,40,75,150],Y=+$("yNum").value;let h="";
+  ks.forEach(y=>{const eC=PRIZE/(cur+y)-FEE,eP=PRIZE/(proj+y)-FEE,d=deepAt(y),
+    cC=eC>=0?'#0a7d2f':'#b00',cP=eP>=0?'#0a7d2f':'#b00';
+    h+='<tr class="'+(y===Y?'hl':'')+'"><td class="l">'+y+'</td><td>'+(groupCov(y)*100).toFixed(1)+'%</td><td>'+(d.win*100).toFixed(1)+'%</td>'+
+      '<td style="color:'+cC+'">'+(eC>=0?'+':'')+'$'+Math.round(eC).toLocaleString()+'</td>'+
+      '<td style="color:'+cC+'">'+(eC>=0?'+':'')+'$'+Math.round(eC*y).toLocaleString()+'</td>'+
+      '<td style="color:'+cP+'">'+(eP>=0?'+':'')+'$'+Math.round(eP).toLocaleString()+'</td>'+
+      '<td style="color:'+cP+'">'+(eP>=0?'+':'')+'$'+Math.round(eP*y).toLocaleString()+'</td></tr>';});
+  $("curve").querySelector("tbody").innerHTML=h;
+  let sat=GCOV.findIndex(v=>v>=0.99);sat=sat<0?20:sat+1;
+  $("advice").innerHTML="<b>How many to run:</b> diversification saturates ~<b>"+sat+" entries</b> (~99% group coverage); beyond that you're buying pure overlay tickets. Each is +EV while total entries stay under <b>"+BREAKEVEN.toLocaleString()+"</b>. Compare the <b>cur</b> vs <b>proj</b> EV columns to see how much fill erodes the edge.";
+}
+function drawCurve(){
+  const Y=+$("yNum").value,cur=+$("curF").value,proj=+$("projF").value;
+  const W=600,H=210,L=54,R=14,Tm=12,B=30,xmin=5,xmax=120;
+  const tot=p=>BREAKEVEN*p/100, evp=p=>Y*(PRIZE/(tot(p)+Y)-FEE);
+  let yMax=evp(xmin),yMin=evp(xmax);const pd=(yMax-yMin)*0.08;yMax+=pd;yMin-=pd;
+  const X=p=>L+(p-xmin)/(xmax-xmin)*(W-L-R), Yc=v=>Tm+(yMax-v)/(yMax-yMin)*(H-Tm-B);
+  let pts="";for(let p=xmin;p<=xmax;p+=1)pts+=(p==xmin?"M":"L")+X(p).toFixed(1)+" "+Yc(evp(p)).toFixed(1)+" ";
+  const z=Yc(0),curP=cur/BREAKEVEN*100,projP=proj/BREAKEVEN*100;
+  const vline=(p,c,l)=>(p<xmin||p>xmax)?"":'<line x1="'+X(p)+'" y1="'+Tm+'" x2="'+X(p)+'" y2="'+(H-B)+'" stroke="'+c+'" stroke-dasharray="3 3"/><text x="'+(X(p)+2)+'" y="'+(Tm+9)+'" font-size="9" fill="'+c+'">'+l+'</text>';
+  let ticks="";[0,25,50,75,100].forEach(p=>{const x=X(p);ticks+='<line x1="'+x+'" y1="'+(H-B)+'" x2="'+x+'" y2="'+(H-B+4)+'" stroke="#999"/><text x="'+x+'" y="'+(H-B+15)+'" font-size="9" fill="#555" text-anchor="middle">'+p+'%</text>';});
+  const yt=v=>'<text x="'+(L-6)+'" y="'+(Yc(v)+3)+'" font-size="9" fill="#555" text-anchor="end">$'+Math.round(v).toLocaleString()+'</text>';
+  return '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;max-width:640px;background:#fbfdfb;border:1px solid #e3ece3;border-radius:6px">'+
+    '<rect x="'+L+'" y="'+Tm+'" width="'+(W-L-R)+'" height="'+Math.max(0,z-Tm)+'" fill="#eafaf0"/>'+
+    '<rect x="'+L+'" y="'+z+'" width="'+(W-L-R)+'" height="'+Math.max(0,H-B-z)+'" fill="#fbeeee"/>'+
+    '<line x1="'+L+'" y1="'+z+'" x2="'+(W-R)+'" y2="'+z+'" stroke="#b00"/>'+
+    '<path d="'+pts+'" fill="none" stroke="#0a7d2f" stroke-width="2"/>'+
+    vline(curP,"#1558d6","current "+curP.toFixed(0)+"%")+vline(projP,"#e8870a","proj "+projP.toFixed(0)+"%")+vline(100,"#666","100% / $0 EV")+
+    ticks+yt(yMax)+yt(0)+yt(yMin)+
+    '<text x="'+(L+(W-L-R)/2)+'" y="'+(H-2)+'" font-size="9" fill="#555" text-anchor="middle">pool fill % &nbsp;(100% = '+BREAKEVEN.toLocaleString()+' entries = break-even)</text></svg>';
+}
+function lineups(Y){$("nShow").textContent=Y;let h="";
+  for(let i=0;i<Math.min(Y,PORT.length);i++)
+    h+='<div class="le"><span class="t"><b>E'+(i+1)+'</b> &nbsp;'+PORT[i].join(" &middot; ")+'</span><span class="s">'+(SOLO[i]*100).toFixed(0)+'%</span></div>';
+  $("lineups").innerHTML=h;}
+
+function matchP(a,b){return 1/(1+Math.pow(10,-(RT[a]-RT[b])/400));}
+function winThis(n,r){const a=BY[n].r,k=KIDX[r];return a[k]>0?a[k+1]/a[k]*100:0;}
+function fillEntrySel(Y){const s=$("entrySel"),cur=clamp(st.entry,0,Y-1);
+  s.innerHTML="";for(let i=0;i<Y;i++){const o=document.createElement("option");o.value=i;o.textContent="Entry "+(i+1);s.appendChild(o);}s.value=cur;st.entry=cur;}
+function recommend(){
+  const e=+$("entrySel").value,round=$("round").value,lev=+$("lev").value/100;
+  const grpTeams=PORT[e]||[],used=usedSet(e);grpTeams.forEach(t=>used.add(t));
+  const legal=T.map(t=>t.n).filter(n=>!out.has(n)&&!used.has(n));
+  let board=[],recHtml="",sq="";
+  if(round==="Group"){
+    $("board").querySelector("thead").style.display="none";
+    recHtml='<div class="big">'+grpTeams.join("  &middot;  ")+'</div><div class="why">Entry '+(e+1)+"'s Phase-1 lineup &mdash; combined survival &asymp; "+(SOLO[e]*100).toFixed(0)+"%. These are consumed; knockout picks come from the rest.</div>";
+    $("rows").innerHTML="";
+  } else {
+    $("board").querySelector("thead").style.display="";
+    const k=KIDX[round],pos=ORDER.indexOf(round);
+    let after=0;for(let j=pos+1;j<ORDER.length;j++)after+=PICKS[ORDER[j]];
+    const byR=[...legal].sort((a,b)=>RT[b]-RT[a]),reserve=new Set(byR.slice(0,after));
+    let elig=legal.filter(n=>!reserve.has(n));if(!elig.length)elig=legal.slice();
+    const tot=elig.reduce((s,n)=>s+Math.max(0,winThis(n,round)),0)||1,own=n=>Math.max(0,winThis(n,round))/tot*100,eff=n=>winThis(n,round)-lev*own(n)*2;
+    elig.sort((a,b)=>eff(b)-eff(a));
+    const picks=elig.slice(0,PICKS[round]),pickN=new Set(picks);
+    let slots=[];for(let j=ORDER.length-1;j>pos;j--)for(let m=0;m<PICKS[ORDER[j]];m++)slots.push(ORDER[j]);
+    const earmark={};byR.slice(0,after).forEach((n,i)=>earmark[n]=slots[i]||"later");
+    board=legal.map(n=>{const w=winThis(n,round);let cls="",tag=["a","option"];
+      if(pickN.has(n)){cls="pick";tag=["p","✅ PICK"];}
+      else if(reserve.has(n)){cls="reserve";tag=["r","save→"+(LBL[earmark[n]]||earmark[n]).replace("Round of ","R")];}
+      return{n,reach:BY[n].r[k],win:w,own:own(n),cls,tag};
+    }).sort((a,b)=>(pickN.has(b.n)-pickN.has(a.n))||(b.win-a.win));
+    recHtml='<div class="big">'+picks.map(n=>n+" ("+winThis(n,round).toFixed(0)+"%)").join("  &middot;  ")+'</div>'+
+      '<div class="why">Entry '+(e+1)+" &mdash; best "+LBL[round]+" pick"+(PICKS[round]>1?'s':'')+" (win-this-round%"+(lev>0?', leverage-faded':'')+"). Reserving strongest for later: "+(byR.slice(0,Math.min(after,4)).join(", ")||"&mdash;")+".</div>";
+    let need=0;for(let j=pos;j<ORDER.length;j++)need+=PICKS[ORDER[j]];
+    const avail=legal.length;
+    if(avail<need)sq='<div class="warn bad">&#9888; SQUEEZE: only '+avail+' legal teams left but '+need+' picks needed through the Final. This entry cannot fill its remaining rounds.</div>';
+    else{let pool=[...legal].sort((a,b)=>RT[b]-RT[a]),plan=[];
+      for(let j=pos;j<ORDER.length;j++){const rr=ORDER[j],aft=ORDER.slice(j+1).reduce((s,x)=>s+PICKS[x],0);
+        const res=new Set(pool.slice(0,aft));let el=pool.filter(n=>!res.has(n));if(el.length<PICKS[rr])el=pool.slice();
+        el.sort((a,b)=>winThis(b,rr)-winThis(a,rr));const ch=el.slice(0,PICKS[rr]);
+        ch.forEach(n=>plan.push({r:rr,n,w:winThis(n,rr)}));pool=pool.filter(n=>ch.indexOf(n)<0);}
+      const thin=plan.reduce((m,x)=>x.w<m.w?x:m,plan[0]);
+      if(thin&&thin.w<50)sq='<div class="warn">&#9888; Thin path: your forced '+LBL[thin.r]+' pick projects to <b>'+thin.n+' ('+thin.w.toFixed(0)+'%)</b>. Spend a horse earlier or keep more buffer.</div>';
+      else sq='<div class="warn" style="background:#eafaf0;border-color:#1c8a49">&#10003; Path OK: '+need+' picks needed, '+avail+' teams available; weakest forced pick ~'+(thin?thin.w.toFixed(0):'-')+'%.</div>';
+    }
+  }
+  $("rec").innerHTML=recHtml;$("squeeze").innerHTML=sq;
+  const tb=$("rows");tb.innerHTML="";
+  board.forEach(b=>{const dead=out.has(b.n)?" dead":"",tr=document.createElement("tr");tr.className=b.cls+dead;
+    tr.innerHTML='<td class="l">'+b.n+'</td><td>'+b.reach.toFixed(1)+'</td><td>'+b.win.toFixed(0)+'</td><td>'+b.own.toFixed(0)+'</td><td class="l"><span class="tag '+b.tag[0]+'">'+b.tag[1]+'</span></td>';
+    tb.appendChild(tr);});
+}
+function teamgrid(){
+  const e=+$("entrySel").value,used=usedSet(e),grid=$("teamgrid");grid.innerHTML="";
+  const gs=[...new Set(T.map(t=>t.g))].sort();
+  gs.forEach(g=>{const h=document.createElement("div");h.className="grp";h.textContent="Group "+g;grid.appendChild(h);
+    T.filter(t=>t.g===g).forEach(t=>{const row=document.createElement("div");row.className="team";
+      row.innerHTML='<span class="nm">'+t.n+'</span>';
+      const x=document.createElement("span");x.className="tg x"+(out.has(t.n)?" on":"");x.textContent="Out";
+      const u=document.createElement("span");u.className="tg u"+(used.has(t.n)?" on":"");u.textContent="Used";
+      x.onclick=()=>{out.has(t.n)?out.delete(t.n):out.add(t.n);save();render();};
+      u.onclick=()=>{const s=usedSet(e);s.has(t.n)?s.delete(t.n):s.add(t.n);st.used[e]=[...s];save();render();};
+      row.appendChild(x);row.appendChild(u);grid.appendChild(row);});});
+}
+function render(){ev();}
+
+function syncY(v){v=clamp(Math.round(v),1,150);$("yEnt").value=v;$("yNum").value=v;$("yLab").textContent=v;}
+syncY(st.Y||3);
+$("yEnt").oninput=()=>{syncY(+$("yEnt").value);st.Y=+$("yNum").value;save();render();};
+$("yNum").oninput=()=>{syncY(+$("yNum").value);st.Y=+$("yNum").value;save();render();};
+if(st.cur)$("curF").value=st.cur; if(st.proj)$("projF").value=st.proj;
+$("curF").oninput=()=>{st.cur=+$("curF").value;save();render();};
+$("projF").oninput=()=>{st.proj=+$("projF").value;save();render();};
+let probLabels=null, probSort={col:2,dir:-1};
+function probTable(){
+  const ths=$("probtbl").querySelectorAll("thead th");
+  if(!probLabels)probLabels=[...ths].map(th=>th.innerHTML);
+  ths.forEach((th,i)=>{th.innerHTML=probLabels[i]+(i===probSort.col?(probSort.dir<0?" &#9660;":" &#9650;"):"");
+    th.onclick=()=>{if(probSort.col===i)probSort.dir*=-1;else{probSort.col=i;probSort.dir=i<=1?1:-1;}probTable();};});
+  const rows=T.map(t=>{const r=t.r,d=[r[0]-r[1],r[1]-r[2],r[2]-r[3],r[3]-r[4],r[4]-r[5]];
+    return [t.n,t.g,r[0],d[0],r[1],d[1],r[2],d[2],r[3],d[3],r[4],d[4],r[5]];});
+  rows.sort((a,b)=>{const x=a[probSort.col],y=b[probSort.col];
+    return typeof x==="string"?probSort.dir*x.localeCompare(y):probSort.dir*(x-y);});
+  const f=x=> typeof x==="string"?x:((x<0.1?"<0.1":x.toFixed(1))+"%");
+  const dxset=new Set([3,5,7,9,11]);
+  const GC={};[...new Set(T.map(t=>t.g))].sort().forEach((g,i)=>GC[g]="hsl("+(i*30)+",55%,90%)");
+  let h="";
+  rows.forEach(v=>{let c="";
+    v.forEach((val,ci)=>{
+      if(ci===0){c+='<td class="l">'+val+'</td>';}
+      else if(ci===1){c+='<td class="l" style="background:'+GC[val]+';font-weight:700;text-align:center">'+val+'</td>';}
+      else{const isD=dxset.has(ci),a=isD?Math.min(0.5,val/60*0.5):Math.min(0.62,val/100*0.62);
+        const bg=isD?"rgba(230,150,20,"+a.toFixed(2)+")":"rgba(28,138,73,"+a.toFixed(2)+")";
+        c+='<td class="'+(isD?"dx":"")+'" style="background:'+bg+'">'+f(val)+'</td>';}
+    });
+    h+='<tr>'+c+'</tr>';});
+  $("probtbl").querySelector("tbody").innerHTML=h;
+}
+function showTab(t){const m={Opt:"tabOpt",Build:"tabBuild",Prob:"tabProb"};
+  for(const kk in m)$(m[kk]).style.display=(kk===t)?"":"none";
+  ["Opt","Build","Prob"].forEach(kk=>$("tb"+kk).classList.toggle("active",kk===t));}
+$("tbOpt").onclick=()=>showTab("Opt");$("tbBuild").onclick=()=>showTab("Build");$("tbProb").onclick=()=>showTab("Prob");
+$("rankBy").onchange=renderBuilder;
+probTable();
+render();
+</script></body></html>
