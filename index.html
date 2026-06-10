@@ -103,7 +103,7 @@ tr.pick td{background:#d6f0dd;font-weight:700}tr.reserve td{background:#fff6da;c
 <div style="font-size:15px;color:#0a5c30;font-weight:700;text-align:center">Edge = Advance% &times; P(not needed in the knockout)</div>
 <div style="font-size:11px;color:#28392c;margin-top:5px"><b>Advance%</b> = real chance to reach the Round of 32 (Opta model). <b>P(not needed)</b> = share of simulated tournaments where the team is <i>not</i> deployed in any knockout round &mdash; it advanced, but you didn&rsquo;t need it later. So a team that advances reliably <b>and</b> rarely goes deep scores high; deep teams (Spain, Germany, Brazil&hellip;) score low because you&rsquo;d rather <span style="color:#9a5800;font-weight:700">save</span> them. Edge can never exceed a team&rsquo;s Advance%.</div>
 </div>
-<div style="font-size:11px;color:#3a4a3d;margin-bottom:4px"><b>Score</b> = &radic;(Edge &times; Burn) &mdash; composite that rewards teams strong on both (table is ranked by it). <b>Edge</b> = advance% &times; P(not needed in the knockout). <b>Burn</b> = advance% &times; P(lose in R32) vs the real bracket opponent. <span style="background:#1c8a49;color:#fff;padding:0 4px;border-radius:3px">PICK</span> = top recommended group picks &middot; <span style="color:#9a5800;font-weight:700">save for KO</span> = deep team, keep for the knockout.</div>
+<div style="font-size:11px;color:#3a4a3d;margin-bottom:4px"><b>Score</b> = how often the team is a usable group pick in an <b>entry that wins every round</b> &mdash; it advances <i>and</i> your deep teams are left free to run the table (= advance% &times; chance it&rsquo;s not needed in the knockout). Table is ranked by it. <b>Burn</b> = advance% &times; P(lose in R32) &mdash; the stricter "advances then immediately exits." <span style="background:#1c8a49;color:#fff;padding:0 4px;border-radius:3px">PICK</span> = top recommended group picks &middot; <span style="color:#9a5800;font-weight:700">save for KO</span> = deep team, keep for the knockout.</div>
 <div style="overflow:auto"><div id="grouppicks"></div></div>
 </div>
 
@@ -454,13 +454,15 @@ function renderGroupPicks(){
   }
   const burn=new Set(GROUPBURNS);
   // Edge = advance% x P(not needed in KO | advanced).  Burn = advance% x P(lose R32 | advanced, real bracket).
+  // Score = how often the team is a usable group pick in an entry that WINS EVERY ROUND
+  //       = advance% x P(it advanced but wasn't needed in the table-running knockout).
   const rows=[...T].map(t=>{const c=inB[t.n], notd=c?notDep[t.n]/c:0, loseR32=c?1-r16[t.n]/c:0;
-    const edge=t.r[0]*notd, brn=t.r[0]*loseR32; return {t,edge,brn,score:Math.sqrt(edge*brn)};}).sort((a,b)=>b.score-a.score).slice(0,32);
+    return {t,score:t.r[0]*notd,brn:t.r[0]*loseR32};}).sort((a,b)=>b.score-a.score).slice(0,32);
   const half=Math.ceil(rows.length/2);
   const cell=(o,i)=>{const t=o.t,b=burn.has(t.n),s=STRONGSET.has(t.n);
     const tag=b?'<span style="background:#1c8a49;color:#fff;padding:0 5px;border-radius:3px;font-size:10px;font-weight:700">PICK</span>':s?'<span style="color:#9a5800;font-weight:700">save for KO</span>':'<span style="color:#888">option</span>';
-    return '<tr'+(b?' style="background:#eafaf0"':'')+'><td style="text-align:right">'+(i+1)+'</td><td class="l"><b>'+t.n+'</b></td><td style="text-align:right"><b style="color:#0a5c30">'+o.score.toFixed(0)+'</b></td><td style="text-align:right">'+o.edge.toFixed(0)+'%</td><td style="text-align:right">'+o.brn.toFixed(0)+'%</td><td style="text-align:right">'+t.r[0].toFixed(0)+'%</td><td class="l">'+tag+'</td></tr>';};
-  const head='<thead><tr><th>#</th><th class="l">Team</th><th>Score</th><th>Edge</th><th>Burn</th><th>Adv%</th><th class="l">Role</th></tr></thead>';
+    return '<tr'+(b?' style="background:#eafaf0"':'')+'><td style="text-align:right">'+(i+1)+'</td><td class="l"><b>'+t.n+'</b></td><td style="text-align:right"><b style="color:#0a5c30">'+o.score.toFixed(0)+'%</b></td><td style="text-align:right">'+o.brn.toFixed(0)+'%</td><td style="text-align:right">'+t.r[0].toFixed(0)+'%</td><td class="l">'+tag+'</td></tr>';};
+  const head='<thead><tr><th>#</th><th class="l">Team</th><th>Score</th><th>Burn</th><th>Adv%</th><th class="l">Role</th></tr></thead>';
   let h='<div style="display:flex;gap:14px;flex-wrap:wrap"><table style="flex:1;min-width:300px">'+head+'<tbody>';
   for(let i=0;i<half;i++)h+=cell(rows[i],i);
   h+='</tbody></table><table style="flex:1;min-width:300px">'+head+'<tbody>';
