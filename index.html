@@ -83,7 +83,7 @@ tr.pick td{background:#d6f0dd;font-weight:700}tr.reserve td{background:#fff6da;c
 
 <div class="panel">
 <h2>② Simulate the contest</h2>
-<div style="font-size:11px;color:#3a4a3d;margin-bottom:8px">Plays the whole tournament on the <b>real 2026 bracket</b> against your projected field &mdash; shows the picks winning lineups use each round and the payout (prize &divide; surviving entries).</div>
+<div style="font-size:11px;color:#3a4a3d;margin-bottom:8px">Models a realistic field of <b>Splash entrants</b> (random, popularity-weighted picks &mdash; chalk in the knockout, spread-out group burns), plays the whole tournament on the <b>real 2026 bracket</b>, and shows <b>what users will pick</b>, which picks carry the biggest <b>payout edge</b>, the expected payout, and (below) the optimal number of entries &mdash; all from the same run.</div>
 <div class="row">
   <button id="simOne" style="background:#1c8a49;color:#fff;border-color:#1c8a49;font-weight:700">&#9654; Play out one contest</button>
   <button id="simMany" style="background:#0c6e3d;color:#fff;border-color:#0c6e3d;font-weight:700">Run 1,000 simulations</button>
@@ -99,9 +99,8 @@ tr.pick td{background:#d6f0dd;font-weight:700}tr.reserve td{background:#fff6da;c
 </div>
 
 <div class="panel">
-<h2>③ Optimal number of entries &mdash; simulated</h2>
-<div style="font-size:11px;color:#3a4a3d;margin-bottom:6px">Simulates the contest at a range of entry counts (your diversified portfolio vs the projected field) to find the count that maximizes <b>expected profit</b>, and shows where your <b>win chance</b> stops climbing.</div>
-<div class="row"><button id="optSim" style="background:#1c8a49;color:#fff;border-color:#1c8a49;font-weight:700">&#9654; Simulate optimal # of entries</button></div>
+<h2>③ Optimal number of entries</h2>
+<div style="font-size:11px;color:#3a4a3d;margin-bottom:6px">Driven by the contest simulation above &mdash; run <b>Play out one contest</b> or <b>Run 1,000 simulations</b> and this updates to the entry count where your <b>win chance</b> stops climbing, with the per-entry <b>EV</b> under the projected field.</div>
 <div class="kpis" id="optkpi" style="margin-top:8px"></div>
 <div class="verdict" id="optverdict" style="margin-top:8px"></div>
 </div>
@@ -187,22 +186,6 @@ function entryWins(L,sim){ // does this group lineup run the whole table in this
     if(!picks.every(n=>win.has(n))) return false;
   }
   return true;
-}
-function runOptSim(){
-  $("optverdict").innerHTML='<div class="verdict go">Simulating&hellip;</div>'; $("optkpi").innerHTML="";
-  setTimeout(()=>{
-    const F=+$("projF").value, N=700, Ymax=Math.min(120,PORT.length);
-    const winM=[];
-    for(let s=0;s<N;s++){const sim=simBracket();
-      const row=new Uint8Array(Ymax); for(let i=0;i<Ymax;i++) row[i]=entryWins(PORT[i],sim)?1:0; winM.push(row);}
-    const winChance=Y=>{let w=0;for(let s=0;s<N;s++){let any=0;for(let i=0;i<Y;i++){if(winM[s][i]){any=1;break;}}w+=any;}return w/N;};
-    const evE=y=>PRIZE/(F+y)-FEE;
-    const Ys=[1,2,3,5,8,12,20,30,50,75,100,120].filter(y=>y<=Ymax);
-    const wMax=winChance(Ymax); let sat=Ys.find(y=>winChance(y)>=0.95*wMax)||Ymax;
-    const k=n=>(n>=0?"+":"")+"$"+Math.round(n).toLocaleString(), e1=evE(sat);
-    $("optkpi").innerHTML=kpi("Win saturates","~"+sat+" entries")+kpi("Win chance @"+sat,(winChance(sat)*100).toFixed(1)+"%")+kpi("EV / entry","~"+k(e1),e1>=0?"pos":"neg");
-    $("optverdict").innerHTML='<div class="verdict '+(e1>=0?"go":"no")+'">Your <b>win chance</b> climbs with entries and flattens around <b>'+sat+'</b> entries ('+(winChance(sat)*100).toFixed(1)+'%) &mdash; that&rsquo;s your win-chase target. <b>Every entry is '+k(e1)+' EV</b> while the field stays under '+BREAKEVEN.toLocaleString()+' total, so for pure <b>profit</b> you can keep adding past that. Run as many as your bankroll allows. <span style="font-weight:400;font-size:11px;color:#3a4a3d">('+N+' sims on the real bracket; EV = parimutuel overlay.)</span></div>';
-  },30);
 }
 function knockoutPlan(gp){
   let pool=T.map(t=>t.n).filter(n=>gp.indexOf(n)<0).sort((a,b)=>RT[b]-RT[a]);
@@ -471,48 +454,107 @@ function renderGroupPicks(){
   h+='</tbody></table></div>';
   $("grouppicks").innerHTML=h;
 }
-function simOne(){
-  const F=(+$("projF").value)+(+$("yNum").value); let sim,L,tries=0;
-  do{sim=simBracket();L=winningLineup(sim);tries++;}while(!L&&tries<60);
-  const surv=Math.max(1,F*fieldFrac(sim));
-  let body;
-  if(L){let rows='<tr><td class="l"><b>Group &mdash; pick 4</b></td><td class="l">'+L.Group.join(", ")+'</td></tr>';
-    KKEYS.forEach(p=>rows+='<tr><td class="l"><b>'+p[1]+'</b></td><td class="l">'+L[p[0]].join(", ")+'</td></tr>');
-    body='<table style="margin-top:6px"><thead><tr><th class="l">Round</th><th class="l">Winning picks</th></tr></thead><tbody>'+rows+'</tbody></table>';
-  } else body='<div style="margin-top:6px;color:#b00">No clean table-runner in this draw &mdash; re-roll.</div>';
-  $("simResult").innerHTML='<div class="rec"><div class="big">&#127942; Champion: '+sim.champion+'</div><div class="why">A lineup that wins THIS bracket &mdash; deep teams saved for the latest rounds, group spots filled from the best burns that advanced (chosen for this draw, not committed in advance):</div></div>'+body+
-    '<div class="kpis" style="margin-top:8px">'+kpi("Field",F.toLocaleString())+kpi("Surviving entries","~"+Math.round(surv).toLocaleString())+kpi("Payout / winner","~$"+Math.round(PRIZE/surv).toLocaleString())+'</div>';
+// ---- realistic Splash field model: random, popularity-weighted user entries ----
+const NAMES=T.map(t=>t.n);
+function wsample(W,k,exclude){ // k distinct names sampled in proportion to weight W, skipping `exclude`
+  const pool=NAMES.filter(n=>!exclude.has(n)), out=[];
+  for(let j=0;j<k;j++){
+    let tot=0; for(const n of pool){if(out.indexOf(n)>=0)continue; tot+=W[n];}
+    if(tot<=0){const rem=pool.filter(n=>out.indexOf(n)<0); out.push(rem[Math.floor(Math.random()*rem.length)]); continue;}
+    let x=Math.random()*tot, pick=null;
+    for(const n of pool){if(out.indexOf(n)>=0)continue; x-=W[n]; if(x<=0){pick=n;break;}}
+    if(pick===null)pick=pool.find(n=>out.indexOf(n)<0);
+    out.push(pick);
+  }
+  return out;
+}
+function userEntry(){ // one simulated Splash entry: chalk knockout (strongest saved latest) + popular group burns, all randomized
+  const used=new Set();
+  const fin=wsample(POPK,1,used); used.add(fin[0]);
+  const sf=wsample(POPK,1,used); used.add(sf[0]);
+  const qf=wsample(POPK,1,used); used.add(qf[0]);
+  const r16=wsample(POPK,2,used); r16.forEach(n=>used.add(n));
+  const r32=wsample(POPK,2,used); r32.forEach(n=>used.add(n));
+  const g=wsample(POPG,4,used);
+  return {g,r32,r16,qf,sf,fin};
+}
+function runFieldSim(N){ // build a realistic field, play N brackets; tally ownership, win-rate, payout, and the optimal-entry curve
+  const F=(+$("projF").value)+(+$("yNum").value), M=1200, Ymax=Math.min(120,PORT.length);
+  const field=[]; for(let i=0;i<M;i++) field.push(userEntry());
+  const RK=["Group","R32","R16","QF","SF","Final"], own={}, winf={}; RK.forEach(k=>{own[k]={};winf[k]={};});
+  field.forEach(e=>{e.g.forEach(n=>own.Group[n]=(own.Group[n]||0)+1);
+    e.r32.forEach(n=>own.R32[n]=(own.R32[n]||0)+1); e.r16.forEach(n=>own.R16[n]=(own.R16[n]||0)+1);
+    own.QF[e.qf[0]]=(own.QF[e.qf[0]]||0)+1; own.SF[e.sf[0]]=(own.SF[e.sf[0]]||0)+1; own.Final[e.fin[0]]=(own.Final[e.fin[0]]||0)+1;});
+  const champ={}; let winSum=0, first=null, firstWin=null; const winM=[];
+  for(let s=0;s<N;s++){const sim=simBracket(), A=sim.adv, ch=sim.champion, WS=sim.rounds.map(r=>new Set(r.winners));
+    champ[ch]=(champ[ch]||0)+1;
+    A.forEach(n=>winf.Group[n]=(winf.Group[n]||0)+1);
+    ["R32","R16","QF","SF","Final"].forEach((k,ri)=>sim.rounds[ri].winners.forEach(n=>winf[k][n]=(winf[k][n]||0)+1));
+    let w=0, ex=null;
+    for(const e of field){ if(e.g.every(n=>A.has(n))&&e.r32.every(n=>WS[0].has(n))&&e.r16.every(n=>WS[1].has(n))&&WS[2].has(e.qf[0])&&WS[3].has(e.sf[0])&&e.fin[0]===ch){w++; if(!ex)ex=e;} }
+    winSum+=w;
+    if(!first)first={champion:ch,entry:ex,winners:w}; if(!firstWin&&ex)firstWin={champion:ch,entry:ex,winners:w};
+    const row=new Uint8Array(Ymax); for(let i=0;i<Ymax;i++) row[i]=entryWins(PORT[i],sim)?1:0; winM.push(row);
+  }
+  return {F,M,N,Ymax,own,winf,champ,winSum,sample:firstWin||first,winM};
+}
+function renderOpt(R){ // populate ③ optimal-# entries from the same sim run
+  const {F,N,Ymax,winM}=R;
+  const winChance=Y=>{let w=0;for(let s=0;s<N;s++){for(let i=0;i<Y;i++){if(winM[s][i]){w++;break;}}}return w/N;};
+  const evE=y=>PRIZE/(F+y)-FEE;
+  const Ys=[1,2,3,5,8,12,20,30,50,75,100,120].filter(y=>y<=Ymax);
+  const wMax=winChance(Ymax)||1e-9; let sat=Ys.find(y=>winChance(y)>=0.95*wMax)||Ymax;
+  const k=n=>(n>=0?"+":"")+"$"+Math.round(n).toLocaleString(), e1=evE(sat);
+  $("optkpi").innerHTML=kpi("Win saturates","~"+sat+" entries")+kpi("Win chance @"+sat,(winChance(sat)*100).toFixed(1)+"%")+kpi("EV / entry","~"+k(e1),e1>=0?"pos":"neg");
+  $("optverdict").innerHTML='<div class="verdict '+(e1>=0?"go":"no")+'">Your <b>win chance</b> climbs with entries and flattens around <b>'+sat+'</b> entries ('+(winChance(sat)*100).toFixed(1)+'%) &mdash; that&rsquo;s your win-chase target. <b>Every entry is '+k(e1)+' EV</b> while the field stays under '+BREAKEVEN.toLocaleString()+' total, so for pure <b>profit</b> you can keep adding past that. <span style="font-weight:400;font-size:11px;color:#3a4a3d">(From the '+N+'-sim run above; EV = parimutuel overlay.)</span></div>';
+}
+function ownTable(R){ // per round: ownership (what users pick) + win% (how often it wins) -> leverage
+  const RK=[["Group","Group &mdash; advance 4"],["R32","Round of 32"],["R16","Round of 16"],["QF","Quarterfinal"],["SF","Semifinal"],["Final","Final / champion"]];
+  let h='<table><thead><tr><th class="l">Round</th><th class="l">What Splash users pick &mdash; ownership / win% <span style="font-weight:400;color:#6a7a6d">(bold = best leverage)</span></th></tr></thead><tbody>';
+  RK.forEach(p=>{const key=p[0];
+    const rows=Object.keys(R.own[key]).map(n=>({n,o:R.own[key][n]/R.M,w:(R.winf[key][n]||0)/R.N})).sort((a,b)=>b.o-a.o).slice(0,6);
+    if(!rows.length)return;
+    const lev=e=>e.w/Math.max(e.o,0.02), best=rows.reduce((m,e)=>lev(e)>lev(m)?e:m,rows[0]);
+    const cells=rows.map(e=>'<span'+(e===best?' style="font-weight:700;color:#0a5c30"':'')+'>'+e.n+' '+(e.o*100).toFixed(0)+'%<span style="color:#9aa8a0">/'+(e.w*100).toFixed(0)+'w</span></span>').join(" &middot; ");
+    h+='<tr'+(key==="Group"?' style="background:#eafaf0"':'')+'><td class="l"><b>'+p[1]+'</b></td><td class="l">'+cells+'</td></tr>';});
+  return h+'</tbody></table>';
 }
 function simMany(){
-  const F=(+$("projF").value)+(+$("yNum").value),N=1000;
-  let survSum=0,wins=0; const champ={}, tally={Group:{},R32:{},R16:{},QF:{},SF:{},Final:{}};
-  for(let s=0;s<N;s++){const sim=simBracket();
-    survSum+=Math.max(1,F*fieldFrac(sim)); champ[sim.champion]=(champ[sim.champion]||0)+1;
-    const L=winningLineup(sim); if(L){wins++; for(const k in tally) L[k].forEach(n=>tally[k][n]=(tally[k][n]||0)+1);}
-  }
-  const avgSurv=survSum/N, W=Math.max(1,wins);
-  let h='<div class="kpis">'+kpi("Field size",F.toLocaleString())+kpi("Avg winning entries",avgSurv.toFixed(1))+kpi("Est. payout / winner","~$"+Math.round(PRIZE/avgSurv).toLocaleString())+'</div>';
-  h+='<div style="margin:12px 0 3px;font-weight:800;color:#0c6e3d">Picks used by winning lineups <span style="font-weight:400;font-size:11px;color:#6a7a6d">(% of the '+wins+' winning lineups using each team &mdash; chosen by the sim, nothing fixed up front)</span></div>';
-  h+='<table><thead><tr><th class="l">Round</th><th class="l">Most-used picks &rarr; biggest edge</th></tr></thead><tbody>';
-  const RKEYS=[["Group","Group &mdash; pick 4"]].concat(KKEYS);
-  RKEYS.forEach(p=>{const top=Object.entries(tally[p[0]]).sort((a,b)=>b[1]-a[1]).slice(0,6);
-    const cells=top.map((e,i)=>'<span'+(i===0?' style="font-weight:700;color:#0a5c30"':'')+'>'+e[0]+' '+(e[1]/W*100).toFixed(0)+'%</span>').join(" &middot; ");
-    h+='<tr'+(p[0]==="Group"?' style="background:#eafaf0"':'')+'><td class="l"><b>'+p[1]+'</b></td><td class="l">'+cells+'</td></tr>';});
-  h+='</tbody></table>';
-  h+='<div style="font-size:11px;color:#6a7a6d;margin-top:4px">Real 2026 bracket each sim. A winning lineup deploys the deep teams (strongest saved latest) and fills its 4 group spots from the best burns that advanced &mdash; <b>picked per draw, not committed in advance</b>. % = share of winning lineups using that team. Payout = $2M &divide; surviving entries (popularity-weighted field; ballpark).</div>';
-  h+='<div style="margin:12px 0 3px;font-weight:800;color:#0c6e3d">Most frequent champions</div>';
-  Object.entries(champ).sort((a,b)=>b[1]-a[1]).slice(0,6).forEach(c=>h+='<div style="font-size:12px;padding:1px 0">'+c[0]+' &mdash; '+(c[1]/N*100).toFixed(1)+'%</div>');
-  $("simResult").innerHTML=h;
+  $("simResult").innerHTML='<div style="color:#0c6e3d;font-weight:600">Modeling the Splash field &amp; simulating&hellip;</div>';
+  setTimeout(()=>{
+    const R=runFieldSim(500);
+    const winFrac=R.winSum/(R.M*R.N), expW=Math.max(1,winFrac*R.F), payout=PRIZE/expW;
+    let h='<div class="kpis">'+kpi("Field size",R.F.toLocaleString())+kpi("Avg co-winners","~"+expW.toFixed(expW<10?1:0))+kpi("Est. payout / winner","~$"+Math.round(payout).toLocaleString())+'</div>';
+    h+='<div style="margin:12px 0 3px;font-weight:800;color:#0c6e3d">What the field will pick &mdash; and which picks are most optimal</div>';
+    h+=ownTable(R);
+    h+='<div style="font-size:11px;color:#6a7a6d;margin-top:4px">First % = <b>ownership</b> (how often a modeled Splash entry uses that team this round). Second %w = how often the team <b>actually wins</b> that round in the sim. <b>High win% + low ownership = biggest payout edge</b> (bold) &mdash; a contrarian winner splits the prize with fewer people. The field rides chalk in the knockout and spreads its 4 group burns across high-advance non-elites. Payout = $2M &divide; expected co-winners.</div>';
+    h+='<div style="margin:12px 0 3px;font-weight:800;color:#0c6e3d">Most frequent champions</div>';
+    Object.entries(R.champ).sort((a,b)=>b[1]-a[1]).slice(0,6).forEach(c=>h+='<div style="font-size:12px;padding:1px 0">'+c[0]+' &mdash; '+(c[1]/R.N*100).toFixed(1)+'%</div>');
+    $("simResult").innerHTML=h;
+    renderOpt(R);
+  },30);
+}
+function simOne(){
+  $("simResult").innerHTML='<div style="color:#0c6e3d;font-weight:600">Playing a contest&hellip;</div>';
+  setTimeout(()=>{
+    const R=runFieldSim(300), s=R.sample, cw=Math.max(1,(s?s.winners:0)/R.M*R.F), payout=PRIZE/cw;
+    let body;
+    if(s&&s.entry){const e=s.entry, rows=[["Group &mdash; advance 4",e.g],["Round of 32",e.r32],["Round of 16",e.r16],["Quarterfinal",e.qf],["Semifinal",e.sf],["Final",e.fin]];
+      body='<table style="margin-top:6px"><thead><tr><th class="l">Round</th><th class="l">Winning entry&rsquo;s picks</th></tr></thead><tbody>'+rows.map(r=>'<tr><td class="l"><b>'+r[0]+'</b></td><td class="l">'+r[1].join(", ")+'</td></tr>').join("")+'</tbody></table>';
+    } else body='<div style="margin-top:6px;color:#b00">No modeled entry ran the whole table in the sampled draw &mdash; re-roll.</div>';
+    $("simResult").innerHTML='<div class="rec"><div class="big">&#127942; Champion: '+(s?s.champion:"&mdash;")+'</div><div class="why">One contest from a modeled Splash field &mdash; here&rsquo;s an entry that ran the whole table:</div></div>'+body+
+      '<div class="kpis" style="margin-top:8px">'+kpi("Field",R.F.toLocaleString())+kpi("Co-winners this contest","~"+Math.round(cw).toLocaleString())+kpi("Payout / winner","~$"+Math.round(payout).toLocaleString())+'</div>';
+    renderOpt(R);
+  },30);
 }
 function showTab(t){const m={Opt:"tabOpt",Build:"tabBuild",Prob:"tabProb"};
   for(const kk in m)$(m[kk]).style.display=(kk===t)?"":"none";
   ["Opt","Build","Prob"].forEach(kk=>$("tb"+kk).classList.toggle("active",kk===t));}
 $("tbOpt").onclick=()=>showTab("Opt");$("tbBuild").onclick=()=>showTab("Build");$("tbProb").onclick=()=>showTab("Prob");
-$("optSim").onclick=runOptSim;
 $("simOne").onclick=simOne;$("simMany").onclick=simMany;
 computeGroupMetrics();
 probTable();
 renderGroupPicks();
 render();
-runOptSim();
+simMany();
 </script></body></html>
