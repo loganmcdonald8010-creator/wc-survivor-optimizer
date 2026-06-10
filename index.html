@@ -468,35 +468,50 @@ function wsample(W,k,exclude){ // k distinct names sampled in proportion to weig
   }
   return out;
 }
+// pick-popularity weights: informed by the probabilities, tilted the way a real Splash field behaves.
+// Knockout = chalk (title odds, sharpened ^1.5 so favorites get over-picked); group = high-advance burns (advance%, sharpened ^2.6).
+// Sharpening concentrates ownership on the obvious picks (real fields pile onto the same favorites) without going all the way to 100%.
+const WK={}, WG={}; T.forEach(t=>{WK[t.n]=Math.pow((t.w||0)+0.03,1.5); WG[t.n]=Math.pow(t.r[0]/100,2.6);});
 function userEntry(){ // one simulated Splash entry: chalk knockout (strongest saved latest) + popular group burns, all randomized
   const used=new Set();
-  const fin=wsample(POPK,1,used); used.add(fin[0]);
-  const sf=wsample(POPK,1,used); used.add(sf[0]);
-  const qf=wsample(POPK,1,used); used.add(qf[0]);
-  const r16=wsample(POPK,2,used); r16.forEach(n=>used.add(n));
-  const r32=wsample(POPK,2,used); r32.forEach(n=>used.add(n));
-  const g=wsample(POPG,4,used);
+  const fin=wsample(WK,1,used); used.add(fin[0]);
+  const sf=wsample(WK,1,used); used.add(sf[0]);
+  const qf=wsample(WK,1,used); used.add(qf[0]);
+  const r16=wsample(WK,2,used); r16.forEach(n=>used.add(n));
+  const r32=wsample(WK,2,used); r32.forEach(n=>used.add(n));
+  const g=wsample(WG,4,used);
   return {g,r32,r16,qf,sf,fin};
 }
 function runFieldSim(N){ // build a realistic field, play N brackets; tally ownership, win-rate, payout, and the optimal-entry curve
-  const F=(+$("projF").value)+(+$("yNum").value), M=1200, Ymax=Math.min(120,PORT.length);
+  const F=(+$("projF").value)+(+$("yNum").value), M=1500, Ymax=Math.min(120,PORT.length);
   const field=[]; for(let i=0;i<M;i++) field.push(userEntry());
   const RK=["Group","R32","R16","QF","SF","Final"], own={}, winf={}; RK.forEach(k=>{own[k]={};winf[k]={};});
   field.forEach(e=>{e.g.forEach(n=>own.Group[n]=(own.Group[n]||0)+1);
     e.r32.forEach(n=>own.R32[n]=(own.R32[n]||0)+1); e.r16.forEach(n=>own.R16[n]=(own.R16[n]||0)+1);
     own.QF[e.qf[0]]=(own.QF[e.qf[0]]||0)+1; own.SF[e.sf[0]]=(own.SF[e.sf[0]]||0)+1; own.Final[e.fin[0]]=(own.Final[e.fin[0]]||0)+1;});
-  const champ={}; let winSum=0, first=null, firstWin=null; const winM=[];
+  const champ={}, depthMode={}; let coSum=0, paySum=0, outright=0, first=null, firstWin=null; const winM=[];
   for(let s=0;s<N;s++){const sim=simBracket(), A=sim.adv, ch=sim.champion, WS=sim.rounds.map(r=>new Set(r.winners));
     champ[ch]=(champ[ch]||0)+1;
     A.forEach(n=>winf.Group[n]=(winf.Group[n]||0)+1);
     ["R32","R16","QF","SF","Final"].forEach((k,ri)=>sim.rounds[ri].winners.forEach(n=>winf[k][n]=(winf[k][n]||0)+1));
-    let w=0, ex=null;
-    for(const e of field){ if(e.g.every(n=>A.has(n))&&e.r32.every(n=>WS[0].has(n))&&e.r16.every(n=>WS[1].has(n))&&WS[2].has(e.qf[0])&&WS[3].has(e.sf[0])&&e.fin[0]===ch){w++; if(!ex)ex=e;} }
-    winSum+=w;
-    if(!first)first={champion:ch,entry:ex,winners:w}; if(!firstWin&&ex)firstWin={champion:ch,entry:ex,winners:w};
+    // how far each entry survives (depth = # rounds passed; 6 = ran the whole table)
+    const cnt=new Array(7).fill(0); let ex=null;
+    for(const e of field){ let d=0;
+      if(e.g.every(n=>A.has(n))){ d=1;
+        if(e.r32.every(n=>WS[0].has(n))){ d=2;
+          if(e.r16.every(n=>WS[1].has(n))){ d=3;
+            if(WS[2].has(e.qf[0])){ d=4;
+              if(WS[3].has(e.sf[0])){ d=5;
+                if(e.fin[0]===ch){ d=6; if(!ex)ex=e; } } } } } }
+      cnt[d]++; }
+    // last ones standing split the pot: deepest round any entry reaches (scaled to the full field F)
+    let cum=0, wd=0, reachWd=1; for(let d=6; d>=0; d--){ cum+=cnt[d]; const reach=cum/M; if(F*reach>=1){ wd=d; reachWd=reach; break; } }
+    const winners=Math.max(1,F*reachWd);
+    coSum+=winners; paySum+=PRIZE/winners; depthMode[wd]=(depthMode[wd]||0)+1; if(wd===6) outright++;
+    if(!first)first={champion:ch,entry:ex,winners}; if(!firstWin&&ex)firstWin={champion:ch,entry:ex,winners};
     const row=new Uint8Array(Ymax); for(let i=0;i<Ymax;i++) row[i]=entryWins(PORT[i],sim)?1:0; winM.push(row);
   }
-  return {F,M,N,Ymax,own,winf,champ,winSum,sample:firstWin||first,winM};
+  return {F,M,N,Ymax,own,winf,champ,coSum,paySum,outright,depthMode,sample:firstWin||first,winM};
 }
 function renderOpt(R){ // populate ③ optimal-# entries from the same sim run
   const {F,N,Ymax,winM}=R;
@@ -510,12 +525,11 @@ function renderOpt(R){ // populate ③ optimal-# entries from the same sim run
 }
 function ownTable(R){ // per round: ownership (what users pick) + win% (how often it wins) -> leverage
   const RK=[["Group","Group &mdash; advance 4"],["R32","Round of 32"],["R16","Round of 16"],["QF","Quarterfinal"],["SF","Semifinal"],["Final","Final / champion"]];
-  let h='<table><thead><tr><th class="l">Round</th><th class="l">What Splash users pick &mdash; ownership / win% <span style="font-weight:400;color:#6a7a6d">(bold = best leverage)</span></th></tr></thead><tbody>';
+  let h='<table><thead><tr><th class="l">Round</th><th class="l">What Splash users pick &mdash; ownership / win%</th></tr></thead><tbody>';
   RK.forEach(p=>{const key=p[0];
     const rows=Object.keys(R.own[key]).map(n=>({n,o:R.own[key][n]/R.M,w:(R.winf[key][n]||0)/R.N})).sort((a,b)=>b.o-a.o).slice(0,6);
     if(!rows.length)return;
-    const lev=e=>e.w/Math.max(e.o,0.02), best=rows.reduce((m,e)=>lev(e)>lev(m)?e:m,rows[0]);
-    const cells=rows.map(e=>'<span'+(e===best?' style="font-weight:700;color:#0a5c30"':'')+'>'+e.n+' '+(e.o*100).toFixed(0)+'%<span style="color:#9aa8a0">/'+(e.w*100).toFixed(0)+'w</span></span>').join(" &middot; ");
+    const cells=rows.map(e=>'<span>'+e.n+' '+(e.o*100).toFixed(0)+'%<span style="color:#9aa8a0">/'+(e.w*100).toFixed(0)+'w</span></span>').join(" &middot; ");
     h+='<tr'+(key==="Group"?' style="background:#eafaf0"':'')+'><td class="l"><b>'+p[1]+'</b></td><td class="l">'+cells+'</td></tr>';});
   return h+'</tbody></table>';
 }
@@ -523,11 +537,14 @@ function simMany(){
   $("simResult").innerHTML='<div style="color:#0c6e3d;font-weight:600">Modeling the Splash field &amp; simulating&hellip;</div>';
   setTimeout(()=>{
     const R=runFieldSim(500);
-    const winFrac=R.winSum/(R.M*R.N), expW=Math.max(1,winFrac*R.F), payout=PRIZE/expW;
-    let h='<div class="kpis">'+kpi("Field size",R.F.toLocaleString())+kpi("Avg co-winners","~"+expW.toFixed(expW<10?1:0))+kpi("Est. payout / winner","~$"+Math.round(payout).toLocaleString())+'</div>';
+    const avgCo=R.coSum/R.N, avgPay=PRIZE/Math.max(1,avgCo);
+    const wd=+Object.entries(R.depthMode).sort((a,b)=>b[1]-a[1])[0][0];
+    const ELIM={6:"a table-runner wins outright",5:"split in the Final",4:"split in the Semifinals",3:"split in the Quarterfinals",2:"split in the Round of 16",1:"split in the Round of 32",0:"split in the group stage"};
+    let h='<div class="kpis">'+kpi("Field size",R.F.toLocaleString())+kpi("Usually decided",ELIM[wd])+kpi("Avg co-winners","~"+avgCo.toFixed(avgCo<10?1:0))+kpi("Est. payout / winner","~$"+Math.round(avgPay).toLocaleString())+'</div>';
+    h+='<div style="font-size:11px;color:#6a7a6d;margin:2px 0 0">Ties split: if no one runs the whole table, the prize splits among the <b>last entries standing</b> (the deepest round anyone reaches in the projected field of '+R.F.toLocaleString()+'). Outright table-run in '+(R.outright/R.N*100).toFixed(0)+'% of sims.</div>';
     h+='<div style="margin:12px 0 3px;font-weight:800;color:#0c6e3d">What the field will pick &mdash; and which picks are most optimal</div>';
     h+=ownTable(R);
-    h+='<div style="font-size:11px;color:#6a7a6d;margin-top:4px">First % = <b>ownership</b> (how often a modeled Splash entry uses that team this round). Second %w = how often the team <b>actually wins</b> that round in the sim. <b>High win% + low ownership = biggest payout edge</b> (bold) &mdash; a contrarian winner splits the prize with fewer people. The field rides chalk in the knockout and spreads its 4 group burns across high-advance non-elites. Payout = $2M &divide; expected co-winners.</div>';
+    h+='<div style="font-size:11px;color:#6a7a6d;margin-top:4px">First % = <b>ownership</b> (how often a modeled Splash entry uses that team this round). Second %w = how often the team <b>actually wins</b> that round in the sim. <b>High win% + low ownership = biggest payout edge</b> &mdash; a contrarian winner splits the prize with fewer people. The field rides chalk in the knockout and spreads its 4 group burns across high-advance non-elites.</div>';
     h+='<div style="margin:12px 0 3px;font-weight:800;color:#0c6e3d">Most frequent champions</div>';
     Object.entries(R.champ).sort((a,b)=>b[1]-a[1]).slice(0,6).forEach(c=>h+='<div style="font-size:12px;padding:1px 0">'+c[0]+' &mdash; '+(c[1]/R.N*100).toFixed(1)+'%</div>');
     $("simResult").innerHTML=h;
@@ -537,7 +554,7 @@ function simMany(){
 function simOne(){
   $("simResult").innerHTML='<div style="color:#0c6e3d;font-weight:600">Playing a contest&hellip;</div>';
   setTimeout(()=>{
-    const R=runFieldSim(300), s=R.sample, cw=Math.max(1,(s?s.winners:0)/R.M*R.F), payout=PRIZE/cw;
+    const R=runFieldSim(300), s=R.sample, cw=Math.max(1,s?s.winners:1), payout=PRIZE/cw;
     let body;
     if(s&&s.entry){const e=s.entry, rows=[["Group &mdash; advance 4",e.g],["Round of 32",e.r32],["Round of 16",e.r16],["Quarterfinal",e.qf],["Semifinal",e.sf],["Final",e.fin]];
       body='<table style="margin-top:6px"><thead><tr><th class="l">Round</th><th class="l">Winning entry&rsquo;s picks</th></tr></thead><tbody>'+rows.map(r=>'<tr><td class="l"><b>'+r[0]+'</b></td><td class="l">'+r[1].join(", ")+'</td></tr>').join("")+'</tbody></table>';
