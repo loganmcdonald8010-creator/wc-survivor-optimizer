@@ -89,12 +89,12 @@ tr.pick td{background:#d6f0dd;font-weight:700}tr.reserve td{background:#fff6da;c
   <button id="simMany" style="background:#0c6e3d;color:#fff;border-color:#0c6e3d;font-weight:700">Run 1,000 simulations</button>
 </div>
 <div id="simResult" style="margin-top:12px"></div>
-<div style="font-size:12px;font-weight:800;color:#0c6e3d;margin-top:16px">Top 32 group picks &mdash; ranked by Score</div>
+<div style="font-size:12px;font-weight:800;color:#0c6e3d;margin-top:16px">Top 32 group picks &mdash; ranked by Edge</div>
 <div style="background:#eafaf0;border:1px solid #1c8a49;border-radius:6px;padding:7px 11px;margin:5px 0">
-<div style="font-size:15px;color:#0a5c30;font-weight:700;text-align:center">Score = Advance% &times; P(not needed in the knockout)</div>
-<div style="font-size:11px;color:#28392c;margin-top:5px"><b>Score</b> = how often the team is a usable group pick in an <b>entry that wins every round</b> &mdash; it advances <i>and</i> your deep teams are left free to run the table. <b>Advance%</b> = real chance to reach R32 (Opta). <b>P(not needed)</b> = share of simulated tournaments where the team isn&rsquo;t deployed in any knockout round. So reliable-but-shallow teams score high; deep teams (Spain, Germany, Brazil&hellip;) score low because you&rsquo;d rather <span style="color:#9a5800;font-weight:700">save</span> them. Score can never exceed a team&rsquo;s Advance%.</div>
+<div style="font-size:15px;color:#0a5c30;font-weight:700;text-align:center">Edge = Advance% &times; P(not needed in the knockout)</div>
+<div style="font-size:11px;color:#28392c;margin-top:5px"><b>Edge</b> = how often the team is a usable group pick in an <b>entry that wins every round</b> &mdash; it advances <i>and</i> your deep teams are left free to run the table. <b>Advance%</b> = real chance to reach R32 (Opta). <b>P(not needed)</b> = share of simulated tournaments where the team isn&rsquo;t deployed in any knockout round. So reliable-but-shallow teams rank high; deep teams (Spain, Germany, Brazil&hellip;) rank low because you&rsquo;d rather <span style="color:#9a5800;font-weight:700">save</span> them. Edge can never exceed a team&rsquo;s Advance%.</div>
 </div>
-<div style="font-size:11px;color:#3a4a3d;margin-bottom:4px"><b>Burn</b> = advance% &times; P(lose in R32) &mdash; the stricter "advances then immediately exits." <span style="background:#1c8a49;color:#fff;padding:0 4px;border-radius:3px">PICK</span> = top recommended group picks &middot; <span style="color:#9a5800;font-weight:700">save for KO</span> = deep team, keep for the knockout.</div>
+<div style="font-size:11px;color:#3a4a3d;margin-bottom:4px"><b>Burn</b> = advance% &times; P(lose in R32) &mdash; the stricter "advances then immediately exits." Highlighted rows are the top recommended group picks.</div>
 <div style="overflow:auto"><div id="grouppicks"></div></div>
 </div>
 
@@ -111,8 +111,8 @@ tr.pick td{background:#d6f0dd;font-weight:700}tr.reserve td{background:#fff6da;c
 <div class="panel">
 <h2>Recommended builds — ranked on advance% &amp; advance-then-lose</h2>
 <div style="font-size:11px;color:#3a4a3d;margin-bottom:6px"><b>Click any column header to sort.</b> Title horses (top-6) are excluded &mdash; never burn them in the group.</div>
-<table id="bestl"><thead><tr><th class="l">Lineup</th><th>Score</th><th>Survival</th><th>Burn</th><th>Asset cost</th></tr></thead><tbody></tbody></table>
-<div style="font-size:11px;color:#3a4a3d;margin-top:5px"><b>Score</b> = avg of the 4 teams&rsquo; <b>win-entry Score</b> (how often each is usable in an entry that wins every round). <b>Survival</b> = combined advance% (all 4 advance). <b>Burn</b> = avg advance% &times; P(lose in R32). <b>Asset cost</b> = avg deep-run index (knockout value you&rsquo;d burn; red &gt;100). <br><i>Note:</i> this table ranks <b>individual</b> builds (an explorer). Your <b>recommended portfolio</b> (right) is diversified to maximize P(&ge;1 entry reaches the Round of 32).</div>
+<table id="bestl"><thead><tr><th class="l">Lineup</th><th>Edge</th><th>Survival</th><th>Burn</th><th>Asset cost</th></tr></thead><tbody></tbody></table>
+<div style="font-size:11px;color:#3a4a3d;margin-top:5px"><b>Edge</b> = avg of the 4 teams&rsquo; <b>win-entry Edge</b> (how often each is usable in an entry that wins every round). <b>Survival</b> = combined advance% (all 4 advance). <b>Burn</b> = avg advance% &times; P(lose in R32). <b>Asset cost</b> = avg deep-run index (knockout value you&rsquo;d burn; red &gt;100). <br><i>Note:</i> this table ranks <b>individual</b> builds (an explorer). Your <b>recommended portfolio</b> (right) is diversified to maximize P(&ge;1 entry reaches the Round of 32).</div>
 </div>
 <div class="cols">
 <div class="panel">
@@ -229,7 +229,7 @@ function bestLineups(){
   }
   return out;
 }
-const BHEAD=["Lineup &mdash; 4 teams to advance","Score","Survival","Burn","Asset cost"], BKEY=[null,"winsc","adv","brn","cost"];
+const BHEAD=["Lineup &mdash; 4 teams to advance","Edge","Survival","Burn","Asset cost"], BKEY=[null,"winsc","adv","brn","cost"];
 let buildSort={col:1,dir:-1};
 function renderBuilder(){
   const all=bestLineups(), kk=BKEY[buildSort.col];
@@ -461,10 +461,9 @@ function renderGroupPicks(){
   const burn=new Set(GROUPBURNS);
   const rows=[...T].map(t=>({t,score:SCORE[t.n],brn:BURN[t.n]})).sort((a,b)=>b.score-a.score).slice(0,32);
   const half=Math.ceil(rows.length/2);
-  const cell=(o,i)=>{const t=o.t,b=burn.has(t.n),s=STRONGSET.has(t.n);
-    const tag=b?'<span style="background:#1c8a49;color:#fff;padding:0 5px;border-radius:3px;font-size:10px;font-weight:700">PICK</span>':s?'<span style="color:#9a5800;font-weight:700">save for KO</span>':'<span style="color:#888">option</span>';
-    return '<tr'+(b?' style="background:#eafaf0"':'')+'><td style="text-align:right">'+(i+1)+'</td><td class="l"><b>'+t.n+'</b></td><td style="text-align:right"><b style="color:#0a5c30">'+o.score.toFixed(0)+'%</b></td><td style="text-align:right">'+o.brn.toFixed(0)+'%</td><td style="text-align:right">'+t.r[0].toFixed(0)+'%</td><td class="l">'+tag+'</td></tr>';};
-  const head='<thead><tr><th>#</th><th class="l">Team</th><th>Score</th><th>Burn</th><th>Adv%</th><th class="l">Role</th></tr></thead>';
+  const cell=(o,i)=>{const t=o.t,b=burn.has(t.n);
+    return '<tr'+(b?' style="background:#eafaf0"':'')+'><td style="text-align:right">'+(i+1)+'</td><td class="l"><b>'+t.n+'</b></td><td style="text-align:right"><b style="color:#0a5c30">'+o.score.toFixed(0)+'%</b></td><td style="text-align:right">'+o.brn.toFixed(0)+'%</td><td style="text-align:right">'+t.r[0].toFixed(0)+'%</td></tr>';};
+  const head='<thead><tr><th>#</th><th class="l">Team</th><th>Edge</th><th>Burn</th><th>Adv%</th></tr></thead>';
   let h='<div style="display:flex;gap:14px;flex-wrap:wrap"><table style="flex:1;min-width:300px">'+head+'<tbody>';
   for(let i=0;i<half;i++)h+=cell(rows[i],i);
   h+='</tbody></table><table style="flex:1;min-width:300px">'+head+'<tbody>';
