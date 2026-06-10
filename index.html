@@ -278,6 +278,7 @@ function lineups(Y){$("nShow").textContent=Y;let h="";
   $("lineups").innerHTML=h;}
 
 function matchP(a,b){return 1/(1+Math.pow(10,-(RT[a]-RT[b])/400));}
+function gauss(sd){let u=0,v=0;while(u===0)u=Math.random();while(v===0)v=Math.random();return sd*Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);} // Box-Muller normal
 function winThis(n,r){const a=BY[n].r,k=KIDX[r];return a[k]>0?a[k+1]/a[k]*100:0;}
 function fillEntrySel(Y){const s=$("entrySel"),cur=clamp(st.entry,0,Y-1);
   s.innerHTML="";for(let i=0;i<Y;i++){const o=document.createElement("option");o.value=i;o.textContent="Entry "+(i+1);s.appendChild(o);}s.value=cur;st.entry=cur;}
@@ -383,7 +384,7 @@ function simBracket(){
   const groups={}; T.forEach(t=>{(groups[t.g]=groups[t.g]||[]).push(t);});
   const W={},R={},thirds=[];
   for(const g in groups){
-    const perf=groups[g].map(t=>({n:t.n,p:t.r[0]+(Math.random()-0.5)*40})).sort((a,b)=>b.p-a.p);
+    const perf=groups[g].map(t=>({n:t.n,p:t.r[0]+gauss(38)})).sort((a,b)=>b.p-a.p); // realistic group-stage variance (calibrated to Opta advance% marginals)
     W[g]=perf[0].n; R[g]=perf[1].n; thirds.push({g,n:perf[2].n,p:perf[2].p});
   }
   thirds.sort((a,b)=>b.p-a.p);
