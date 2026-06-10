@@ -429,14 +429,16 @@ function fieldFrac(sim){ // chance a popularity-weighted field entry survives th
 // group picks are committed UP FRONT, so they're a fixed set: high advance%, but NOT your deep threats (saved for KO)
 const STRONGSET=new Set([...T].sort((a,b)=>RT[b.n]-RT[a.n]).slice(0,11).map(t=>t.n));
 const GROUPBURNS=[...T].filter(t=>!STRONGSET.has(t.n)).sort((a,b)=>b.r[0]-a.r[0]).slice(0,4).map(t=>t.n);
-function winningLineup(sim){ // a lineup that runs the whole table given this bracket: fixed group burns + adaptive KO (strongest saved latest)
-  if(!GROUPBURNS.every(n=>sim.adv.has(n))) return null;          // group burns didn't all advance -> entry is out
-  if(GROUPBURNS.indexOf(sim.champion)>=0) return null;            // a burn won it all (can't be group + final)
-  const r=sim.rounds, used=new Set(GROUPBURNS), L={Group:GROUPBURNS.slice()};
+function winningLineup(sim){ // a lineup that runs the whole table for this bracket: KO deployed strongest-latest, group filled adaptively (not fixed up front)
+  const r=sim.rounds, used=new Set(), L={};
   const take=(pool,k)=>{const c=pool.filter(n=>!used.has(n)).sort((a,b)=>RT[b]-RT[a]).slice(0,k);c.forEach(n=>used.add(n));return c;};
   L.Final=[sim.champion]; used.add(sim.champion);
   L.SF=take(r[3].winners,1); L.QF=take(r[2].winners,1); L.R16=take(r[1].winners,2); L.R32=take(r[0].winners,2);
   if(L.R32.length<2||L.R16.length<2||L.QF.length<1||L.SF.length<1) return null;
+  // Group: 4 advancers we never deployed, chosen per draw by win-entry Score (the best burns) — picked from the sim, not committed in advance.
+  L.Group=[...sim.adv].filter(n=>!used.has(n)).sort((a,b)=>(SCORE[b]||0)-(SCORE[a]||0)).slice(0,4);
+  if(L.Group.length<4) return null;
+  L.Group.forEach(n=>used.add(n));
   return L;
 }
 const KKEYS=[["R32","Round of 32 &mdash; pick 2"],["R16","Round of 16 &mdash; pick 2"],["QF","Quarterfinal"],["SF","Semifinal"],["Final","Final"]];
@@ -478,29 +480,27 @@ function simOne(){
   if(L){let rows='<tr><td class="l"><b>Group &mdash; pick 4</b></td><td class="l">'+L.Group.join(", ")+'</td></tr>';
     KKEYS.forEach(p=>rows+='<tr><td class="l"><b>'+p[1]+'</b></td><td class="l">'+L[p[0]].join(", ")+'</td></tr>');
     body='<table style="margin-top:6px"><thead><tr><th class="l">Round</th><th class="l">Winning picks</th></tr></thead><tbody>'+rows+'</tbody></table>';
-  } else body='<div style="margin-top:6px;color:#b00">The fixed group burns didn&rsquo;t all advance in this draw &mdash; that entry busts in the group.</div>';
-  $("simResult").innerHTML='<div class="rec"><div class="big">&#127942; Champion: '+sim.champion+'</div><div class="why">A lineup that wins THIS bracket &mdash; group burns fixed up front, deep teams saved for the latest rounds:</div></div>'+body+
+  } else body='<div style="margin-top:6px;color:#b00">No clean table-runner in this draw &mdash; re-roll.</div>';
+  $("simResult").innerHTML='<div class="rec"><div class="big">&#127942; Champion: '+sim.champion+'</div><div class="why">A lineup that wins THIS bracket &mdash; deep teams saved for the latest rounds, group spots filled from the best burns that advanced (chosen for this draw, not committed in advance):</div></div>'+body+
     '<div class="kpis" style="margin-top:8px">'+kpi("Field",F.toLocaleString())+kpi("Surviving entries","~"+Math.round(surv).toLocaleString())+kpi("Payout / winner","~$"+Math.round(PRIZE/surv).toLocaleString())+'</div>';
 }
 function simMany(){
   const F=(+$("projF").value)+(+$("yNum").value),N=1000;
-  let survSum=0,wins=0; const champ={}, tally={R32:{},R16:{},QF:{},SF:{},Final:{}};
+  let survSum=0,wins=0; const champ={}, tally={Group:{},R32:{},R16:{},QF:{},SF:{},Final:{}};
   for(let s=0;s<N;s++){const sim=simBracket();
     survSum+=Math.max(1,F*fieldFrac(sim)); champ[sim.champion]=(champ[sim.champion]||0)+1;
     const L=winningLineup(sim); if(L){wins++; for(const k in tally) L[k].forEach(n=>tally[k][n]=(tally[k][n]||0)+1);}
   }
   const avgSurv=survSum/N, W=Math.max(1,wins);
   let h='<div class="kpis">'+kpi("Field size",F.toLocaleString())+kpi("Avg winning entries",avgSurv.toFixed(1))+kpi("Est. payout / winner","~$"+Math.round(PRIZE/avgSurv).toLocaleString())+'</div>';
-  h+='<div style="margin:12px 0 3px;font-weight:800;color:#0c6e3d">Group picks &mdash; committed up front <span style="font-weight:400;font-size:11px;color:#6a7a6d">(advance%)</span></div>';
-  h+='<div style="font-size:13px">'+GROUPBURNS.map(n=>'<b>'+n+'</b> <span style="color:#0a7d2f">'+BY[n].r[0].toFixed(0)+'%</span>').join(" &middot; ")+'</div>';
-  h+='<div style="font-size:11px;color:#6a7a6d;margin-top:3px">High advance%, but <b>low deep-run</b> &mdash; teams that escape their group then exit early, so spending them costs you nothing later. Your title threats (Germany, Brazil, Belgium&hellip;) are deliberately <b>saved</b> for the knockout below.</div>';
-  h+='<div style="margin:12px 0 3px;font-weight:800;color:#0c6e3d">Knockout picks used by winning lineups <span style="font-weight:400;font-size:11px;color:#6a7a6d">(% of the '+wins+' winning lineups using each team)</span></div>';
+  h+='<div style="margin:12px 0 3px;font-weight:800;color:#0c6e3d">Picks used by winning lineups <span style="font-weight:400;font-size:11px;color:#6a7a6d">(% of the '+wins+' winning lineups using each team &mdash; chosen by the sim, nothing fixed up front)</span></div>';
   h+='<table><thead><tr><th class="l">Round</th><th class="l">Most-used picks &rarr; biggest edge</th></tr></thead><tbody>';
-  KKEYS.forEach(p=>{const top=Object.entries(tally[p[0]]).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  const RKEYS=[["Group","Group &mdash; pick 4"]].concat(KKEYS);
+  RKEYS.forEach(p=>{const top=Object.entries(tally[p[0]]).sort((a,b)=>b[1]-a[1]).slice(0,6);
     const cells=top.map((e,i)=>'<span'+(i===0?' style="font-weight:700;color:#0a5c30"':'')+'>'+e[0]+' '+(e[1]/W*100).toFixed(0)+'%</span>').join(" &middot; ");
-    h+='<tr><td class="l"><b>'+p[1]+'</b></td><td class="l">'+cells+'</td></tr>';});
+    h+='<tr'+(p[0]==="Group"?' style="background:#eafaf0"':'')+'><td class="l"><b>'+p[1]+'</b></td><td class="l">'+cells+'</td></tr>';});
   h+='</tbody></table>';
-  h+='<div style="font-size:11px;color:#6a7a6d;margin-top:4px">Real 2026 bracket each sim. A winning lineup = fixed group burns all advance, then deploy the deep teams (strongest saved latest). % = share of winning lineups using that team. Payout = $2M &divide; surviving entries (popularity-weighted field; ballpark).</div>';
+  h+='<div style="font-size:11px;color:#6a7a6d;margin-top:4px">Real 2026 bracket each sim. A winning lineup deploys the deep teams (strongest saved latest) and fills its 4 group spots from the best burns that advanced &mdash; <b>picked per draw, not committed in advance</b>. % = share of winning lineups using that team. Payout = $2M &divide; surviving entries (popularity-weighted field; ballpark).</div>';
   h+='<div style="margin:12px 0 3px;font-weight:800;color:#0c6e3d">Most frequent champions</div>';
   Object.entries(champ).sort((a,b)=>b[1]-a[1]).slice(0,6).forEach(c=>h+='<div style="font-size:12px;padding:1px 0">'+c[0]+' &mdash; '+(c[1]/N*100).toFixed(1)+'%</div>');
   $("simResult").innerHTML=h;
