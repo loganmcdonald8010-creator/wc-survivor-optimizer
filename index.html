@@ -115,7 +115,10 @@ tr.pick td{background:#d6f0dd;font-weight:700}tr.reserve td{background:#fff6da;c
 </div>
 <div class="cols">
 <div class="panel">
-<h2>Recommended portfolio &mdash; <span id="bN">3</span> entries for the Round of 32</h2>
+<h2 style="display:flex;align-items:center;gap:7px;flex-wrap:wrap">Recommended portfolio &mdash; <span id="bN">3</span> entries, ranked by
+<select id="portMetric" style="font-size:14px;padding:2px 7px;border-radius:5px;border:1px solid #1c8a49;background:#fff;color:#0c6e3d;font-weight:800">
+<option value="winsc">Edge</option><option value="adv">Survival</option><option value="brn">Burn</option></select></h2>
+<div id="portdesc" style="font-size:11px;color:#3a4a3d;margin:-2px 0 6px"></div>
 <div class="lineups" id="bportfolio"></div>
 <div style="font-size:11px;font-weight:700;color:#0c6e3d;margin-top:8px">Team exposure &mdash; times used across your <span id="tcN">3</span> entries</div>
 <div id="teamcount" style="margin-top:3px"></div>
@@ -213,6 +216,20 @@ function bestLineups(){
   return out;
 }
 const BHEAD=["Lineup &mdash; 4 teams to advance","Edge","Survival","Burn","Asset cost"], BKEY=[null,"winsc","adv","brn","cost"];
+const PMETA={winsc:["Edge","win-entry Edge (usable in entries that win every round)"],adv:["Survival","combined advance% (all 4 teams clear the group)"],brn:["Burn","advance-then-lose &mdash; teams that escape the group then exit in R32"]};
+function buildPortfolio(mkey,Y){ // top Y lineups by the chosen metric, diversified so entries aren't near-duplicates
+  const all=bestLineups().sort((a,b)=>(b[mkey]||0)-(a[mkey]||0));
+  const pool=buildPool(), cap=Math.max(2,Math.ceil(Y*4/Math.max(1,pool.length))+1), chosen=[], use={};
+  for(const c of all){ if(chosen.length>=Y)break; if(c.ts.some(n=>(use[n]||0)>=cap))continue; chosen.push(c); c.ts.forEach(n=>use[n]=(use[n]||0)+1); }
+  for(const c of all){ if(chosen.length>=Y)break; if(chosen.indexOf(c)<0){chosen.push(c);} }   // relax cap if pool ran short
+  return chosen.slice(0,Y);
+}
+function portfolioCov(entries){ // P(>=1 entry gets all 4 into R32), quick MC on advance% marginals
+  const teams=[...new Set(entries.flat())], N=3000; let any=0;
+  for(let s=0;s<N;s++){const adv={}; teams.forEach(n=>adv[n]=Math.random()<BY[n].r[0]/100);
+    if(entries.some(e=>e.every(n=>adv[n]))) any++;}
+  return any/N;
+}
 let buildSort={col:1,dir:-1};
 function renderBuilder(){
   const all=bestLineups(), kk=BKEY[buildSort.col];
@@ -225,19 +242,21 @@ function renderBuilder(){
   best.forEach((c,i)=>{const hi=c.cost>100?' style="color:#b00;font-weight:700"':'';const row=i===0?' style="background:#d6f0dd"':'';
     h+='<tr'+row+'><td class="l">'+c.ts.join(" · ")+'</td><td><b style="color:#0a5c30">'+c.winsc.toFixed(0)+'%</b></td><td>'+c.adv.toFixed(1)+'%</td><td>'+c.brn.toFixed(0)+'%</td><td'+hi+'>'+c.cost.toFixed(0)+'</td></tr>';});
   $("bestl").querySelector("tbody").innerHTML=h;
-  const Y=+$("yNum").value;$("bN").textContent=Y;let pf="";
-  for(let i=0;i<Math.min(Y,PORT.length);i++)pf+='<div class="le"><span class="t"><b>E'+(i+1)+'</b> '+PORT[i].join(" · ")+'</span><span class="s">advance '+(SOLO[i]*100).toFixed(0)+'%</span></div>';
+  const Y=+$("yNum").value;$("bN").textContent=Y;
+  const mkey=$("portMetric").value, port=buildPortfolio(mkey,Y), fmt={winsc:c=>c.winsc.toFixed(0)+'% edge',adv:c=>c.adv.toFixed(1)+'% advance',brn:c=>c.brn.toFixed(0)+'% burn'};
+  $("portdesc").innerHTML="Top "+port.length+" four-team builds by <b>"+PMETA[mkey][0]+"</b> = "+PMETA[mkey][1]+", diversified so one group upset can&rsquo;t sink every entry.";
+  let pf="";port.forEach((c,i)=>pf+='<div class="le"><span class="t"><b>E'+(i+1)+'</b> '+c.ts.join(" · ")+'</span><span class="s">'+fmt[mkey](c)+'</span></div>');
   $("bportfolio").innerHTML=pf;
-  const nE=Math.min(Y,PORT.length),cnt={};
-  for(let i=0;i<nE;i++)PORT[i].forEach(n=>cnt[n]=(cnt[n]||0)+1);
+  const nE=port.length,cnt={};
+  port.forEach(c=>c.ts.forEach(n=>cnt[n]=(cnt[n]||0)+1));
   $("tcN").textContent=nE;
   let ch="";Object.entries(cnt).sort((a,b)=>b[1]-a[1]).forEach(e=>{const pct=Math.round(e[1]/nE*100);
     const bg=pct>=60?'#1c8a49':pct>=30?'#bfe6cd':'#eef5ef',col=pct>=60?'#fff':'#15241a';
     ch+='<span style="display:inline-block;margin:2px 4px 2px 0;padding:1px 7px;border-radius:4px;background:'+bg+';color:'+col+';border:1px solid #bfe6cd;font-size:11px"><b>'+e[0]+'</b> &times;'+e[1]+'</span>';});
   $("teamcount").innerHTML=ch||'<span style="font-size:11px;color:#888">&mdash;</span>';
-  const g=groupCov(Y)*100;
-  $("bkpi").innerHTML=kpi("P(&ge;1 reaches R32)",g.toFixed(1)+"%");
-  $("bnote").innerHTML="<b>P(&ge;1 reaches R32)</b> = chance at least one of your "+Y+" entries gets all 4 group picks into the Round of 32. Each entry above shows its own advance% (all 4 advancing). The set is diversified so a single group upset doesn&rsquo;t sink every entry.";
+  const g=portfolioCov(port.map(c=>c.ts))*100;
+  $("bkpi").innerHTML=kpi("P(&ge;1 reaches R32)",g.toFixed(1)+"%")+kpi("Ranked by",PMETA[mkey][0]);
+  $("bnote").innerHTML="<b>P(&ge;1 reaches R32)</b> = chance at least one of your "+Y+" entries gets all 4 group picks into the Round of 32 (advance% marginals). Each entry shows its <b>"+PMETA[mkey][0]+"</b> value. Switch the dropdown to re-rank the set by <b>Edge</b> (best win-entry burns), <b>Survival</b> (safest to advance), or <b>Burn</b> (advance-then-lose).";
 }
 function curve(cur,proj){
   const ks=[1,2,3,5,8,12,20,40,75,150],Y=+$("yNum").value;let h="";
@@ -348,6 +367,8 @@ $("yEnt").oninput=()=>{syncY(+$("yEnt").value);st.Y=+$("yNum").value;save();rend
 $("yNum").oninput=()=>{syncY(+$("yNum").value);st.Y=+$("yNum").value;save();render();};
 if(st.proj)$("projF").value=st.proj;
 $("projF").oninput=()=>{st.proj=+$("projF").value;save();render();};
+if(st.pm)$("portMetric").value=st.pm;
+$("portMetric").onchange=()=>{st.pm=$("portMetric").value;save();renderBuilder();};
 let probLabels=null, probSort={col:2,dir:-1};
 function probTable(){
   const ths=$("probtbl").querySelectorAll("thead th");
