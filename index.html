@@ -82,41 +82,37 @@ tr.pick td{background:#d6f0dd;font-weight:700}tr.reserve td{background:#fff6da;c
 </div>
 
 <div class="panel">
-<h2>② Optimal number of entries &mdash; simulated</h2>
-<div style="font-size:11px;color:#3a4a3d;margin-bottom:6px">Simulates the contest at a range of entry counts (your diversified portfolio vs the projected field) to find the count that maximizes <b>expected profit</b>, and shows where your <b>win chance</b> stops climbing.</div>
-<div class="row"><button id="optSim" style="background:#1c8a49;color:#fff;border-color:#1c8a49;font-weight:700">&#9654; Simulate optimal # of entries</button></div>
-<div class="kpis" id="optkpi" style="margin-top:8px"></div>
-<div class="verdict" id="optverdict" style="margin-top:8px"></div>
-<div id="opttable" style="margin-top:8px"></div>
-</div>
-
-<div class="panel">
-<h2>③ Simulate the contest</h2>
+<h2>② Simulate the contest</h2>
 <div style="font-size:11px;color:#3a4a3d;margin-bottom:8px">Plays the whole tournament on the <b>real 2026 bracket</b> against your projected field &mdash; shows the picks winning lineups use each round and the payout (prize &divide; surviving entries).</div>
 <div class="row">
   <button id="simOne" style="background:#1c8a49;color:#fff;border-color:#1c8a49;font-weight:700">&#9654; Play out one contest</button>
   <button id="simMany" style="background:#0c6e3d;color:#fff;border-color:#0c6e3d;font-weight:700">Run 1,000 simulations</button>
 </div>
 <div id="simResult" style="margin-top:12px"></div>
-<div style="font-size:12px;font-weight:800;color:#0c6e3d;margin-top:16px">Top 32 group picks &mdash; ranked by edge</div>
+<div style="font-size:12px;font-weight:800;color:#0c6e3d;margin-top:16px">Top 32 group picks &mdash; ranked by Score</div>
 <div style="background:#eafaf0;border:1px solid #1c8a49;border-radius:6px;padding:7px 11px;margin:5px 0">
-<div style="font-size:15px;color:#0a5c30;font-weight:700;text-align:center">Edge = Advance% &times; P(not needed in the knockout)</div>
-<div style="font-size:11px;color:#28392c;margin-top:5px"><b>Advance%</b> = real chance to reach the Round of 32 (Opta model). <b>P(not needed)</b> = share of simulated tournaments where the team is <i>not</i> deployed in any knockout round &mdash; it advanced, but you didn&rsquo;t need it later. So a team that advances reliably <b>and</b> rarely goes deep scores high; deep teams (Spain, Germany, Brazil&hellip;) score low because you&rsquo;d rather <span style="color:#9a5800;font-weight:700">save</span> them. Edge can never exceed a team&rsquo;s Advance%.</div>
+<div style="font-size:15px;color:#0a5c30;font-weight:700;text-align:center">Score = Advance% &times; P(not needed in the knockout)</div>
+<div style="font-size:11px;color:#28392c;margin-top:5px"><b>Score</b> = how often the team is a usable group pick in an <b>entry that wins every round</b> &mdash; it advances <i>and</i> your deep teams are left free to run the table. <b>Advance%</b> = real chance to reach R32 (Opta). <b>P(not needed)</b> = share of simulated tournaments where the team isn&rsquo;t deployed in any knockout round. So reliable-but-shallow teams score high; deep teams (Spain, Germany, Brazil&hellip;) score low because you&rsquo;d rather <span style="color:#9a5800;font-weight:700">save</span> them. Score can never exceed a team&rsquo;s Advance%.</div>
 </div>
-<div style="font-size:11px;color:#3a4a3d;margin-bottom:4px"><b>Score</b> = how often the team is a usable group pick in an <b>entry that wins every round</b> &mdash; it advances <i>and</i> your deep teams are left free to run the table (= advance% &times; chance it&rsquo;s not needed in the knockout). Table is ranked by it. <b>Burn</b> = advance% &times; P(lose in R32) &mdash; the stricter "advances then immediately exits." <span style="background:#1c8a49;color:#fff;padding:0 4px;border-radius:3px">PICK</span> = top recommended group picks &middot; <span style="color:#9a5800;font-weight:700">save for KO</span> = deep team, keep for the knockout.</div>
+<div style="font-size:11px;color:#3a4a3d;margin-bottom:4px"><b>Burn</b> = advance% &times; P(lose in R32) &mdash; the stricter "advances then immediately exits." <span style="background:#1c8a49;color:#fff;padding:0 4px;border-radius:3px">PICK</span> = top recommended group picks &middot; <span style="color:#9a5800;font-weight:700">save for KO</span> = deep team, keep for the knockout.</div>
 <div style="overflow:auto"><div id="grouppicks"></div></div>
+</div>
+
+<div class="panel">
+<h2>③ Optimal number of entries &mdash; simulated</h2>
+<div style="font-size:11px;color:#3a4a3d;margin-bottom:6px">Simulates the contest at a range of entry counts (your diversified portfolio vs the projected field) to find the count that maximizes <b>expected profit</b>, and shows where your <b>win chance</b> stops climbing.</div>
+<div class="row"><button id="optSim" style="background:#1c8a49;color:#fff;border-color:#1c8a49;font-weight:700">&#9654; Simulate optimal # of entries</button></div>
+<div class="kpis" id="optkpi" style="margin-top:8px"></div>
+<div class="verdict" id="optverdict" style="margin-top:8px"></div>
 </div>
 
 </div><!-- /tabOpt -->
 <div id="tabBuild" style="display:none">
 <div class="panel">
 <h2>Recommended builds — ranked on advance% &amp; advance-then-lose</h2>
-<div class="row">
-  <label>Rank by <select id="rankBy"><option value="score">Overall score</option><option value="adv">Survival (advance%)</option><option value="bal">Balanced</option><option value="burn">Burn quality (&Delta; R32)</option></select></label>
-  <span style="font-size:11px;color:#3a4a3d">Uses entries &amp; field from the Optimizer tab. Title horses (top-6) excluded &mdash; never burn them in the group.</span>
-</div>
-<table id="bestl"><thead><tr><th class="l">Lineup &mdash; 4 teams to advance</th><th>Score</th><th>Survival</th><th>&Delta; R32 (burn)</th><th>Asset cost (deep-run)</th></tr></thead><tbody></tbody></table>
-<div style="font-size:11px;color:#3a4a3d;margin-top:5px"><b>Score</b> = composite build rating = Survival + 0.4&times;Burn &minus; 0.25&times;Asset cost (higher = better all-round build). <b>Survival</b> = combined advance% (all 4 advance). <b>&Delta; R32</b> = avg "advance-then-lose-in-R32" (higher = cleaner burn). <b>Asset cost</b> = avg <b>deep-run index</b> = sum of each team&rsquo;s % chance to reach R16, QF, SF, Final &amp; Win &mdash; the total knockout value you&rsquo;d burn (red &gt;100 = burning deep teams). <br><i>Note:</i> this table ranks <b>individual</b> builds by Score (an explorer). Your <b>recommended portfolio</b> (right) is different &mdash; it&rsquo;s <b>diversified to maximize P(&ge;1 entry reaches the Round of 32)</b>, mixing strong builds with complementary teams so a single group-stage upset doesn&rsquo;t knock out all your entries.</div>
+<div style="font-size:11px;color:#3a4a3d;margin-bottom:6px"><b>Click any column header to sort.</b> Title horses (top-6) are excluded &mdash; never burn them in the group.</div>
+<table id="bestl"><thead><tr><th class="l">Lineup</th><th>Score</th><th>Survival</th><th>Burn</th><th>Asset cost</th></tr></thead><tbody></tbody></table>
+<div style="font-size:11px;color:#3a4a3d;margin-top:5px"><b>Score</b> = avg of the 4 teams&rsquo; <b>win-entry Score</b> (how often each is usable in an entry that wins every round). <b>Survival</b> = combined advance% (all 4 advance). <b>Burn</b> = avg advance% &times; P(lose in R32). <b>Asset cost</b> = avg deep-run index (knockout value you&rsquo;d burn; red &gt;100). <br><i>Note:</i> this table ranks <b>individual</b> builds (an explorer). Your <b>recommended portfolio</b> (right) is diversified to maximize P(&ge;1 entry reaches the Round of 32).</div>
 </div>
 <div class="cols">
 <div class="panel">
@@ -193,7 +189,7 @@ function entryWins(L,sim){ // does this group lineup run the whole table in this
   return true;
 }
 function runOptSim(){
-  $("optverdict").innerHTML='<div class="verdict go">Simulating&hellip;</div>'; $("optkpi").innerHTML=""; $("opttable").innerHTML="";
+  $("optverdict").innerHTML='<div class="verdict go">Simulating&hellip;</div>'; $("optkpi").innerHTML="";
   setTimeout(()=>{
     const F=+$("projF").value, N=700, Ymax=Math.min(120,PORT.length);
     const winM=[];
@@ -205,12 +201,7 @@ function runOptSim(){
     const wMax=winChance(Ymax); let sat=Ys.find(y=>winChance(y)>=0.95*wMax)||Ymax;
     const k=n=>(n>=0?"+":"")+"$"+Math.round(n).toLocaleString(), e1=evE(sat);
     $("optkpi").innerHTML=kpi("Win saturates","~"+sat+" entries")+kpi("Win chance @"+sat,(winChance(sat)*100).toFixed(1)+"%")+kpi("EV / entry","~"+k(e1),e1>=0?"pos":"neg");
-    $("optverdict").innerHTML='<div class="verdict '+(e1>=0?"go":"no")+'">Your <b>win chance</b> climbs with entries and flattens around <b>'+sat+'</b> ('+(winChance(sat)*100).toFixed(1)+'%) &mdash; that&rsquo;s your win-chase target. <b>Every entry is '+k(e1)+' EV</b> while the field stays under '+BREAKEVEN.toLocaleString()+' total, so for pure <b>profit</b> you can keep adding past that. Run as many as your bankroll allows.</div>';
-    let h='<table><thead><tr><th>Entries</th><th>Win chance</th><th>EV / entry</th><th>Total EV (profit)</th></tr></thead><tbody>';
-    Ys.forEach(Y=>{const wc=winChance(Y),e=evE(Y),hl=Y===sat?' style="background:#d6f0dd;font-weight:700"':'';
-      h+='<tr'+hl+'><td>'+Y+'</td><td>'+(wc*100).toFixed(1)+'%</td><td style="color:'+(e>=0?'#0a7d2f':'#b00')+'">'+k(e)+'</td><td style="color:'+(e>=0?'#0a7d2f':'#b00')+'">'+k(e*Y)+'</td></tr>';});
-    h+='</tbody></table><div style="font-size:11px;color:#6a7a6d;margin-top:4px">Win chance = P(&ge;1 of your entries runs the whole table), '+N+' sims on the real bracket. EV = parimutuel overlay (prize&divide;total&minus;fee) &mdash; your optimized entries do at least this well. Win chance saturates; EV stays positive until '+BREAKEVEN.toLocaleString()+' total entries, so profit keeps rising with volume.</div>';
-    $("opttable").innerHTML=h;
+    $("optverdict").innerHTML='<div class="verdict '+(e1>=0?"go":"no")+'">Your <b>win chance</b> climbs with entries and flattens around <b>'+sat+'</b> entries ('+(winChance(sat)*100).toFixed(1)+'%) &mdash; that&rsquo;s your win-chase target. <b>Every entry is '+k(e1)+' EV</b> while the field stays under '+BREAKEVEN.toLocaleString()+' total, so for pure <b>profit</b> you can keep adding past that. Run as many as your bankroll allows. <span style="font-weight:400;font-size:11px;color:#3a4a3d">('+N+' sims on the real bracket; EV = parimutuel overlay.)</span></div>';
   },30);
 }
 function knockoutPlan(gp){
@@ -226,24 +217,30 @@ function buildPool(){
   const horses=new Set([...T].sort((a,b)=>b.w-a.w).slice(0,6).map(t=>t.n));
   return T.filter(t=>!horses.has(t.n)&&t.r[0]>=70).map(t=>t.n);
 }
-function bestLineups(mode){
+function bestLineups(){
   const p=buildPool(),out=[];
   for(let i=0;i<p.length;i++)for(let j=i+1;j<p.length;j++)for(let k=j+1;k<p.length;k++)for(let l=k+1;l<p.length;l++){
     const ts=[p[i],p[j],p[k],p[l]];
     const adv=ts.reduce((q,n)=>q*BY[n].r[0]/100,1)*100;
-    const dr=ts.reduce((s,n)=>s+(BY[n].r[0]-BY[n].r[1]),0)/4;
-    const cost=ts.reduce((s,n)=>s+BY[n].r[1]+BY[n].r[2]+BY[n].r[3]+BY[n].r[4]+BY[n].r[5],0)/4; // deep-run index: sum reach% R16..Win
-    const score=adv+0.4*dr-0.25*cost;
-    out.push({ts,adv,dr,cost,score});
+    const winsc=ts.reduce((s,n)=>s+(SCORE[n]||0),0)/4;   // avg win-entry Score of the 4 teams
+    const brn=ts.reduce((s,n)=>s+(BURN[n]||0),0)/4;       // avg Burn
+    const cost=ts.reduce((s,n)=>s+BY[n].r[1]+BY[n].r[2]+BY[n].r[3]+BY[n].r[4]+BY[n].r[5],0)/4; // deep-run index
+    out.push({ts,adv,winsc,brn,cost});
   }
-  const sc=mode==='burn'?(c=>c.dr):mode==='bal'?(c=>c.adv*0.7+c.dr):mode==='adv'?(c=>c.adv):(c=>c.score);
-  out.sort((a,b)=>sc(b)-sc(a));
-  return out.slice(0,12);
+  return out;
 }
+const BHEAD=["Lineup &mdash; 4 teams to advance","Score","Survival","Burn","Asset cost"], BKEY=[null,"winsc","adv","brn","cost"];
+let buildSort={col:1,dir:-1};
 function renderBuilder(){
-  const best=bestLineups($("rankBy").value);let h="";
+  const all=bestLineups(), kk=BKEY[buildSort.col];
+  all.sort((a,b)=>buildSort.dir*((a[kk]||0)-(b[kk]||0)));
+  const best=all.slice(0,15);
+  const ths=$("bestl").querySelectorAll("thead th");
+  ths.forEach((th,i)=>{th.style.cursor=i>0?"pointer":"";th.innerHTML=BHEAD[i]+(i===buildSort.col?(buildSort.dir<0?" &#9660;":" &#9650;"):"");
+    if(i>0)th.onclick=()=>{if(buildSort.col===i)buildSort.dir*=-1;else{buildSort.col=i;buildSort.dir=-1;}renderBuilder();};});
+  let h="";
   best.forEach((c,i)=>{const hi=c.cost>100?' style="color:#b00;font-weight:700"':'';const row=i===0?' style="background:#d6f0dd"':'';
-    h+='<tr'+row+'><td class="l">'+c.ts.join(" · ")+'</td><td><b style="color:#0a5c30">'+c.score.toFixed(0)+'</b></td><td>'+c.adv.toFixed(1)+'%</td><td>'+c.dr.toFixed(1)+'%</td><td'+hi+'>'+c.cost.toFixed(0)+'</td></tr>';});
+    h+='<tr'+row+'><td class="l">'+c.ts.join(" · ")+'</td><td><b style="color:#0a5c30">'+c.winsc.toFixed(0)+'%</b></td><td>'+c.adv.toFixed(1)+'%</td><td>'+c.brn.toFixed(0)+'%</td><td'+hi+'>'+c.cost.toFixed(0)+'</td></tr>';});
   $("bestl").querySelector("tbody").innerHTML=h;
   const Y=+$("yNum").value;$("bN").textContent=Y;let pf="";
   for(let i=0;i<Math.min(Y,PORT.length);i++)pf+='<div class="le"><span class="t"><b>E'+(i+1)+'</b> '+PORT[i].join(" · ")+'</span><span class="s">advance '+(SOLO[i]*100).toFixed(0)+'%</span></div>';
@@ -443,7 +440,8 @@ function winningLineup(sim){ // a lineup that runs the whole table given this br
   return L;
 }
 const KKEYS=[["R32","Round of 32 &mdash; pick 2"],["R16","Round of 16 &mdash; pick 2"],["QF","Quarterfinal"],["SF","Semifinal"],["Final","Final"]];
-function renderGroupPicks(){
+let SCORE={}, BURN={};  // per-team group-pick metrics, computed once from the sims
+function computeGroupMetrics(){
   const N=1500, inB={}, notDep={}, r16={}; T.forEach(t=>{inB[t.n]=0;notDep[t.n]=0;r16[t.n]=0;});
   for(let s=0;s<N;s++){
     const sim=simBracket(),r=sim.rounds,used=new Set([sim.champion]);
@@ -452,12 +450,14 @@ function renderGroupPicks(){
     const wonR32=new Set(r[0].winners); // teams that won their R32 match (reached R16)
     sim.adv.forEach(n=>{ inB[n]++; if(!used.has(n)) notDep[n]++; if(wonR32.has(n)) r16[n]++; });
   }
+  // Score = advance% x P(advanced but not needed in the table-running knockout) = usable in an entry that wins every round.
+  // Burn  = advance% x P(lose R32 | advanced, real bracket) = the stricter "advances then immediately exits".
+  T.forEach(t=>{const c=inB[t.n], notd=c?notDep[t.n]/c:0, loseR32=c?1-r16[t.n]/c:0;
+    SCORE[t.n]=t.r[0]*notd; BURN[t.n]=t.r[0]*loseR32;});
+}
+function renderGroupPicks(){
   const burn=new Set(GROUPBURNS);
-  // Edge = advance% x P(not needed in KO | advanced).  Burn = advance% x P(lose R32 | advanced, real bracket).
-  // Score = how often the team is a usable group pick in an entry that WINS EVERY ROUND
-  //       = advance% x P(it advanced but wasn't needed in the table-running knockout).
-  const rows=[...T].map(t=>{const c=inB[t.n], notd=c?notDep[t.n]/c:0, loseR32=c?1-r16[t.n]/c:0;
-    return {t,score:t.r[0]*notd,brn:t.r[0]*loseR32};}).sort((a,b)=>b.score-a.score).slice(0,32);
+  const rows=[...T].map(t=>({t,score:SCORE[t.n],brn:BURN[t.n]})).sort((a,b)=>b.score-a.score).slice(0,32);
   const half=Math.ceil(rows.length/2);
   const cell=(o,i)=>{const t=o.t,b=burn.has(t.n),s=STRONGSET.has(t.n);
     const tag=b?'<span style="background:#1c8a49;color:#fff;padding:0 5px;border-radius:3px;font-size:10px;font-weight:700">PICK</span>':s?'<span style="color:#9a5800;font-weight:700">save for KO</span>':'<span style="color:#888">option</span>';
@@ -511,7 +511,7 @@ function showTab(t){const m={Opt:"tabOpt",Build:"tabBuild",Prob:"tabProb"};
 $("tbOpt").onclick=()=>showTab("Opt");$("tbBuild").onclick=()=>showTab("Build");$("tbProb").onclick=()=>showTab("Prob");
 $("optSim").onclick=runOptSim;
 $("simOne").onclick=simOne;$("simMany").onclick=simMany;
-$("rankBy").onchange=renderBuilder;
+computeGroupMetrics();
 probTable();
 renderGroupPicks();
 render();
