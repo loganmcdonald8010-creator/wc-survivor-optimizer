@@ -633,6 +633,14 @@ function rCard(label,bg,team,lev,note){
     '<div style="font-size:18px;font-weight:800;margin-top:1px">'+team+(lev!==null?' <span style="font-size:13px;opacity:.9">('+(lev>0?"+":"")+lev+')</span>':'')+'</div>'+
     '<div style="font-size:11px;opacity:.92;margin-top:1px">'+note+'</div></div>';
 }
+function rList(title,bg,arr){
+  let rows=arr.map((t,i)=>'<div style="display:flex;justify-content:space-between;gap:8px;padding:2px 0;font-size:12.5px;border-top:1px solid rgba(255,255,255,.18)">'+
+    '<span><b>'+(i+1)+'.</b> '+t.name+' <span style="opacity:.65;font-size:10px">'+t.group+'</span></span>'+
+    '<span style="white-space:nowrap"><b>'+(t.lev>0?"+":"")+t.lev+'</b> <span style="opacity:.7;font-weight:400;font-size:11px">(you '+t.mine.toFixed(0)+'% / fld '+t.field+'%)</span></span></div>').join("");
+  if(!arr.length)rows='<div style="font-size:11px;opacity:.8;padding-top:3px">none yet</div>';
+  return '<div style="flex:1;min-width:300px;background:'+bg+';border-radius:9px;padding:9px 12px;color:#fff">'+
+    '<div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;padding-bottom:2px">'+title+'</div>'+rows+'</div>';
+}
 function rRender(){
   const fld=RFLD[RCUR], data=RSETS[RCUR]||[];
   const rs=data.map(t=>{const f=fld[t.name],has=(f!==undefined&&f!=="");const fv=has?parseFloat(f):0;
@@ -647,12 +655,12 @@ function rRender(){
       '<td style="font-weight:700;color:'+lc+'">'+lt+'</td><td class="l">'+rVerdict(t.lev,t.has)+'</td></tr>';});
   $("roottbl").querySelector("tbody").innerHTML=h;
   $("rmsg").textContent=forC+" to root for, "+agC+" to root against";
-  // swing cards
+  // swing lists: top 10 to root for, top 10 to root against
   const wf=rs.filter(t=>t.has); let sw="";
   if(!wf.length){sw=rCard("Biggest swings","#0a5c30","Enter field %",null,"Type or paste the field&rsquo;s ownership to see who to cheer hardest for and against.");}
-  else{const top=wf.slice().sort((a,b)=>b.lev-a.lev)[0], bot=wf.slice().sort((a,b)=>a.lev-b.lev)[0];
-    sw+=rCard("&#9650; Root hardest FOR","#0a7d2f",top.lev>=3?top.name:"&mdash;",top.lev>=3?top.lev:null,top.lev>=3?("You own "+top.mine.toFixed(0)+"% vs field "+top.field+"% &mdash; its run lifts you most."):"No strong overweight yet.");
-    sw+=rCard("&#9660; Root hardest AGAINST","#b00020",bot.lev<=-3?bot.name:"&mdash;",bot.lev<=-3?bot.lev:null,bot.lev<=-3?("Field owns "+bot.field+"% vs your "+bot.mine.toFixed(0)+"% &mdash; you want it to bust."):"No strong field overweight yet.");}
+  else{const fors=wf.filter(t=>t.lev>0).sort((a,b)=>b.lev-a.lev).slice(0,10);
+    const ags=wf.filter(t=>t.lev<0).sort((a,b)=>a.lev-b.lev).slice(0,10);
+    sw=rList("&#9650; Root FOR &mdash; top "+fors.length,"#0a7d2f",fors)+rList("&#9660; Root AGAINST &mdash; top "+ags.length,"#b00020",ags);}
   $("rswing").innerHTML=sw;
   $("roottbl").querySelectorAll("tbody input").forEach(inp=>inp.oninput=()=>{const n=inp.dataset.n;
     if(inp.value==="")delete RFLD[RCUR][n]; else RFLD[RCUR][n]=inp.value; rSave();
